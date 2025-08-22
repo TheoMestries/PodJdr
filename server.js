@@ -47,7 +47,7 @@ app.get('/contacts', async (req, res) => {
   const { userId } = req.query;
   try {
     const [rows] = await pool.execute(
-      `SELECT u.username FROM contacts c JOIN users u ON c.contact_id = u.id WHERE c.user_id = ?`,
+      `SELECT u.username FROM contacts c JOIN users u ON c.contact_id = u.id WHERE c.user_id = ? AND c.status = 1`,
       [userId]
     );
     res.json(rows);
@@ -56,7 +56,21 @@ app.get('/contacts', async (req, res) => {
   }
 });
 
-// Ajout d'un contact
+// Récupération des demandes de contact
+app.get('/contact-requests', async (req, res) => {
+  const { userId } = req.query;
+  try {
+    const [rows] = await pool.execute(
+      `SELECT u.username, c.user_id AS requesterId FROM contacts c JOIN users u ON c.user_id = u.id WHERE c.contact_id = ? AND c.status = 0`,
+      [userId]
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Envoi d'une demande de contact
 app.post('/contacts', async (req, res) => {
   const { userId, contactUsername } = req.body;
   try {
@@ -69,10 +83,28 @@ app.post('/contacts', async (req, res) => {
     }
     const contactId = users[0].id;
     await pool.execute(
-      'INSERT INTO contacts (user_id, contact_id) VALUES (?, ?)',
+      'INSERT INTO contacts (user_id, contact_id, status) VALUES (?, ?, 0)',
       [userId, contactId]
     );
-    res.status(201).json({ message: 'Contact ajouté' });
+    res.status(201).json({ message: 'Demande envoyée' });
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Acceptation d'une demande de contact
+app.post('/contacts/accept', async (req, res) => {
+  const { userId, requesterId } = req.body;
+  try {
+    await pool.execute(
+      'UPDATE contacts SET status = 1 WHERE user_id = ? AND contact_id = ?',
+      [requesterId, userId]
+    );
+    await pool.execute(
+      'INSERT INTO contacts (user_id, contact_id, status) VALUES (?, ?, 1)',
+      [userId, requesterId]
+    );
+    res.json({ message: 'Contact accepté' });
   } catch (err) {
     res.status(500).json({ error: 'Erreur serveur' });
   }
