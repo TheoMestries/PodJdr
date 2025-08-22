@@ -75,6 +75,9 @@ body.hub {
 
 .contacts-panel li {
   margin-bottom: 5px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .contacts-panel form {
@@ -95,5 +98,13 @@ body.hub {
   background: #0048FFFF;
   border: none;
   color: #000;
+  cursor: pointer;
+}
+
+.delete-btn {
+  padding: 0;
+  background: none;
+  border: none;
+  color: #0048FFFF;
   cursor: pointer;
 }

@@ -13,9 +13,23 @@ async function loadContacts() {
   const contacts = await res.json();
   const list = document.getElementById('contact-list');
   list.innerHTML = '';
-  contacts.forEach(({ username }) => {
+  contacts.forEach(({ id, username }) => {
     const li = document.createElement('li');
-    li.textContent = username;
+    const span = document.createElement('span');
+    span.textContent = username;
+    li.appendChild(span);
+    const btn = document.createElement('button');
+    btn.textContent = '🗑️';
+    btn.classList.add('delete-btn');
+    btn.addEventListener('click', async () => {
+      await fetch('/contacts', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, contactId: id }),
+      });
+      loadContacts();
+    });
+    li.appendChild(btn);
     list.appendChild(li);
   });
 }
