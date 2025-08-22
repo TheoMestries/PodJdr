@@ -6,15 +6,15 @@ body {
   align-items: center;
   background: radial-gradient(circle at center, #1a1a1a, #000);
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  color: #00ff9c;
+  color: #0048FFFF;
 }
 
 .login-container {
   background: rgba(0, 0, 0, 0.7);
   padding: 40px;
-  border: 2px solid #00ff9c;
+  border: 2px solid #0048FFFF;
   border-radius: 10px;
-  box-shadow: 0 0 20px #00ff9c;
+  box-shadow: 0 0 20px #0048FFFF;
   width: 300px;
 }
 
@@ -33,14 +33,14 @@ body {
   padding: 10px;
   margin-bottom: 15px;
   background: #111;
-  border: 1px solid #00ff9c;
-  color: #00ff9c;
+  border: 1px solid #0048FFFF;
+  color: #0048FFFF;
 }
 
 .login-container button {
   width: 100%;
   padding: 10px;
-  background: #00ff9c;
+  background: #0048FFFF;
   border: none;
   color: #000;
   font-weight: bold;
@@ -48,5 +48,5 @@ body {
 }
 
 .login-container button:hover {
-  background: #00c77a;
+  background: #0048FFFF;
 }
