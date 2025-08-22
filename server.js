@@ -42,6 +42,42 @@ app.post('/login', async (req, res) => {
   }
 });
 
+// Récupération des contacts d'un utilisateur
+app.get('/contacts', async (req, res) => {
+  const { userId } = req.query;
+  try {
+    const [rows] = await pool.execute(
+      `SELECT u.username FROM contacts c JOIN users u ON c.contact_id = u.id WHERE c.user_id = ?`,
+      [userId]
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Ajout d'un contact
+app.post('/contacts', async (req, res) => {
+  const { userId, contactUsername } = req.body;
+  try {
+    const [users] = await pool.execute(
+      'SELECT id FROM users WHERE username = ?',
+      [contactUsername]
+    );
+    if (!users.length) {
+      return res.status(404).json({ error: 'Utilisateur introuvable' });
+    }
+    const contactId = users[0].id;
+    await pool.execute(
+      'INSERT INTO contacts (user_id, contact_id) VALUES (?, ?)',
+      [userId, contactId]
+    );
+    res.status(201).json({ message: 'Contact ajouté' });
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Serveur en écoute sur le port ${PORT}`);
