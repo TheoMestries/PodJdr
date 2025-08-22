@@ -124,6 +124,34 @@ app.delete('/contacts', async (req, res) => {
   }
 });
 
+// Récupération des messages entre deux utilisateurs
+app.get('/messages', async (req, res) => {
+  const { userId, contactId } = req.query;
+  try {
+    const [rows] = await pool.execute(
+      `SELECT sender_id, receiver_id, content, created_at FROM messages WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?) ORDER BY created_at ASC`,
+      [userId, contactId, contactId, userId]
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Envoi d'un message
+app.post('/messages', async (req, res) => {
+  const { senderId, receiverId, content } = req.body;
+  try {
+    await pool.execute(
+      'INSERT INTO messages (sender_id, receiver_id, content) VALUES (?, ?, ?)',
+      [senderId, receiverId, content]
+    );
+    res.status(201).json({ message: 'Message envoyé' });
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Serveur en écoute sur le port ${PORT}`);

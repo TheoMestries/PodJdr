@@ -108,3 +108,43 @@ body.hub {
   color: #0048FFFF;
   cursor: pointer;
 }
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  margin-left: 20px;
+}
+
+.chat.hidden {
+  display: none;
+}
+
+#message-list {
+  flex: 1;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 10px 0;
+  overflow-y: auto;
+}
+
+#message-form {
+  display: flex;
+  gap: 5px;
+}
+
+#message-input {
+  flex: 1;
+  padding: 5px;
+  background: #111;
+  border: 1px solid #0048FFFF;
+  color: #0048FFFF;
+}
+
+#message-form button {
+  padding: 5px 10px;
+  background: #0048FFFF;
+  border: none;
+  color: #000;
+  cursor: pointer;
+}
