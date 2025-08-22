@@ -201,6 +201,27 @@ body.auth {
   padding: 0;
   margin: 0 0 10px 0;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#message-list li.message {
+  max-width: 60%;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+
+#message-list li.sent {
+  align-self: flex-end;
+  background: var(--secondary);
+  color: #000;
+}
+
+#message-list li.received {
+  align-self: flex-start;
+  background: var(--primary);
+  color: #000;
 }
 
 #message-form {

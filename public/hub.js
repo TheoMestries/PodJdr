@@ -97,14 +97,22 @@ async function openChat(id, username) {
 
 async function loadMessages() {
   if (!currentContactId) return;
-  const res = await fetch(`/messages?userId=${encodeURIComponent(userId)}&contactId=${encodeURIComponent(currentContactId)}`);
+  const res = await fetch(
+    `/messages?userId=${encodeURIComponent(userId)}&contactId=${encodeURIComponent(currentContactId)}`
+  );
   if (!res.ok) return;
   const messages = await res.json();
   const list = document.getElementById('message-list');
   list.innerHTML = '';
   messages.forEach(({ sender_id, content }) => {
     const li = document.createElement('li');
-    li.textContent = (sender_id == userId ? 'Moi: ' : '') + content;
+    li.textContent = content;
+    li.classList.add('message');
+    if (sender_id == userId) {
+      li.classList.add('sent');
+    } else {
+      li.classList.add('received');
+    }
     list.appendChild(li);
   });
   list.scrollTop = list.scrollHeight;
