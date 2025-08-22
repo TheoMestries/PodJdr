@@ -10,5 +10,9 @@ document.querySelector('form').addEventListener('submit', async (e) => {
   });
 
   const data = await res.json();
-  alert(data.message || data.error);
+  if (res.ok) {
+    window.location.href = `hub.html?username=${encodeURIComponent(username)}`;
+  } else {
+    alert(data.error);
+  }
 });
