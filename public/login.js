@@ -11,7 +11,8 @@ document.querySelector('form').addEventListener('submit', async (e) => {
 
   const data = await res.json();
   if (res.ok) {
-    window.location.href = `hub.html?username=${encodeURIComponent(username)}`;
+    const { userId } = data;
+    window.location.href = `hub.html?username=${encodeURIComponent(username)}&userId=${encodeURIComponent(userId)}`;
   } else {
     alert(data.error);
   }
