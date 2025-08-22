@@ -9,12 +9,12 @@ app.use(express.json());
 
 // Enregistrement d'un nouvel utilisateur
 app.post('/register', async (req, res) => {
-  const { email, password } = req.body;
+  const { username, password } = req.body;
   try {
     const hash = await bcrypt.hash(password, 10);
     await pool.execute(
-      'INSERT INTO users (email, password_hash) VALUES (?, ?)',
-      [email, hash]
+      'INSERT INTO users (username, password_hash) VALUES (?, ?)',
+      [username, hash]
     );
     res.status(201).json({ message: 'Utilisateur créé' });
   } catch (err) {
@@ -24,13 +24,13 @@ app.post('/register', async (req, res) => {
 
 // Connexion
 app.post('/login', async (req, res) => {
-  const { email, password } = req.body;
+  const { username, password } = req.body;
   try {
     const [rows] = await pool.execute(
-      'SELECT id, password_hash FROM users WHERE email = ?',
-      [email]
+      'SELECT id, password_hash FROM users WHERE username = ?',
+      [username]
     );
-    if (!rows.length) return res.status(401).json({ error: 'Email inconnu' });
+    if (!rows.length) return res.status(401).json({ error: 'Identifiant inconnu' });
 
     const user = rows[0];
     const ok = await bcrypt.compare(password, user.password_hash);
