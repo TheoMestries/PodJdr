@@ -1,0 +1,14 @@
+{
+  "name": "podjdr",
+  "version": "1.0.0",
+  "description": "Interface futuriste pour Pod JDR",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "echo \"No tests yet\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}
