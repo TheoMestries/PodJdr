@@ -7,27 +7,35 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body class="hub">
-  <aside class="contacts-panel">
+  <div class="hub-container">
+    <aside class="sidebar">
       <h2>Contacts</h2>
       <ul id="contact-list"></ul>
+
       <h2>Demandes</h2>
       <ul id="request-list"></ul>
+
       <form id="add-contact-form">
         <input type="text" id="contact-username" placeholder="Nom d'utilisateur" required />
         <button type="submit">Ajouter</button>
       </form>
-  </aside>
-  <header class="hub-header">
-    <h1 id="user-name"></h1>
-    <section id="chat-section" class="chat hidden">
-      <h2 id="chat-with"></h2>
-      <ul id="message-list"></ul>
-      <form id="message-form">
-        <input type="text" id="message-input" placeholder="Message..." autocomplete="off" required />
-        <button type="submit">Envoyer</button>
-      </form>
-    </section>
-  </header>
+    </aside>
+
+    <main class="chat-area">
+      <header class="user-bar">
+        <h1 id="user-name"></h1>
+      </header>
+
+      <section id="chat-section" class="chat hidden">
+        <h2 id="chat-with"></h2>
+        <ul id="message-list"></ul>
+        <form id="message-form">
+          <input type="text" id="message-input" placeholder="Message..." autocomplete="off" required />
+          <button type="submit">Envoyer</button>
+        </form>
+      </section>
+    </main>
+  </div>
   <script src="hub.js"></script>
 </body>
 </html>
