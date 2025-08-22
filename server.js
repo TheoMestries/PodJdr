@@ -47,7 +47,7 @@ app.get('/contacts', async (req, res) => {
   const { userId } = req.query;
   try {
     const [rows] = await pool.execute(
-      `SELECT u.username FROM contacts c JOIN users u ON c.contact_id = u.id WHERE c.user_id = ? AND c.status = 1`,
+      `SELECT u.id, u.username FROM contacts c JOIN users u ON c.contact_id = u.id WHERE c.user_id = ? AND c.status = 1`,
       [userId]
     );
     res.json(rows);
@@ -105,6 +105,20 @@ app.post('/contacts/accept', async (req, res) => {
       [userId, requesterId]
     );
     res.json({ message: 'Contact accepté' });
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Suppression d'un contact
+app.delete('/contacts', async (req, res) => {
+  const { userId, contactId } = req.body;
+  try {
+    await pool.execute(
+      'DELETE FROM contacts WHERE (user_id = ? AND contact_id = ?) OR (user_id = ? AND contact_id = ?)',
+      [userId, contactId, contactId, userId]
+    );
+    res.json({ message: 'Contact supprimé' });
   } catch (err) {
     res.status(500).json({ error: 'Erreur serveur' });
   }
