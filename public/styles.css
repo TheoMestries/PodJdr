@@ -50,3 +50,12 @@ body {
 .login-container button:hover {
   background: #0048FFFF;
 }
+
+body.hub {
+  display: block;
+  padding: 20px;
+}
+
+.hub-header {
+  text-align: center;
+}
