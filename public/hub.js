@@ -6,6 +6,9 @@ if (username) {
   document.getElementById('user-name').textContent = username;
 }
 
+let currentContactId = null;
+let chatInterval = null;
+
 async function loadContacts() {
   if (!userId) return;
   const res = await fetch(`/contacts?userId=${encodeURIComponent(userId)}`);
@@ -17,6 +20,7 @@ async function loadContacts() {
     const li = document.createElement('li');
     const span = document.createElement('span');
     span.textContent = username;
+    span.addEventListener('click', () => openChat(id, username));
     li.appendChild(span);
     const btn = document.createElement('button');
     btn.textContent = '🗑️';
@@ -68,16 +72,55 @@ document
     const res = await fetch('/contacts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, contactUsername }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        document.getElementById('contact-username').value = '';
-        loadRequests();
-      } else {
-        alert(data.error);
-      }
+      body: JSON.stringify({ userId, contactUsername }),
     });
+    const data = await res.json();
+    if (res.ok) {
+      document.getElementById('contact-username').value = '';
+      loadRequests();
+    } else {
+      alert(data.error);
+    }
+  });
 
 loadContacts();
 loadRequests();
+
+async function openChat(id, username) {
+  currentContactId = id;
+  document.getElementById('chat-with').textContent = username;
+  document.getElementById('chat-section').classList.remove('hidden');
+  await loadMessages();
+  if (chatInterval) clearInterval(chatInterval);
+  chatInterval = setInterval(loadMessages, 3000);
+}
+
+async function loadMessages() {
+  if (!currentContactId) return;
+  const res = await fetch(`/messages?userId=${encodeURIComponent(userId)}&contactId=${encodeURIComponent(currentContactId)}`);
+  if (!res.ok) return;
+  const messages = await res.json();
+  const list = document.getElementById('message-list');
+  list.innerHTML = '';
+  messages.forEach(({ sender_id, content }) => {
+    const li = document.createElement('li');
+    li.textContent = (sender_id == userId ? 'Moi: ' : '') + content;
+    list.appendChild(li);
+  });
+  list.scrollTop = list.scrollHeight;
+}
+
+document.getElementById('message-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!currentContactId) return;
+  const input = document.getElementById('message-input');
+  const content = input.value.trim();
+  if (!content) return;
+  await fetch('/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ senderId: userId, receiverId: currentContactId, content }),
+  });
+  input.value = '';
+  loadMessages();
+});
