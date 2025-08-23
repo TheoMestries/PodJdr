@@ -1,5 +1,29 @@
 let username = '';
 
+function polygonClipPath(sides) {
+  const points = [];
+  const angleStep = (2 * Math.PI) / sides;
+  const offset = -Math.PI / 2;
+  for (let i = 0; i < sides; i++) {
+    const x = 50 + 50 * Math.cos(offset + i * angleStep);
+    const y = 50 + 50 * Math.sin(offset + i * angleStep);
+    points.push(`${x}% ${y}%`);
+  }
+  return `polygon(${points.join(',')})`;
+}
+
+function getDieClipPath(sides) {
+  const shapes = {
+    4: 'polygon(50% 0%, 0% 100%, 100% 100%)',
+    6: 'polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)',
+    8: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)',
+    10: 'polygon(50% 0%, 95% 30%, 85% 100%, 15% 100%, 5% 30%)',
+    12: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
+    20: 'polygon(50% 0%, 85% 15%, 100% 40%, 100% 60%, 85% 85%, 50% 100%, 15% 85%, 0% 60%, 0% 40%, 15% 15%)',
+  };
+  return shapes[sides] || polygonClipPath(sides);
+}
+
 async function init() {
   const res = await fetch('/me');
   if (!res.ok) {
@@ -29,6 +53,7 @@ document.getElementById('roll-form').addEventListener('submit', async (e) => {
     const die = document.createElement('div');
     die.className = 'die rolling';
     die.textContent = '?';
+    die.style.clipPath = getDieClipPath(sides);
     rollContainer.appendChild(die);
     diceElems.push(die);
   }
@@ -39,30 +64,32 @@ document.getElementById('roll-form').addEventListener('submit', async (e) => {
     });
   }, 100);
 
-  try {
-    const response = await fetch('/dice', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ count, sides }),
-    });
-    if (response.ok) {
-      const data = await response.json();
-      clearInterval(animation);
-      const results = data.result.split(',').map((n) => n.trim());
-      diceElems.forEach((die, i) => {
-        die.classList.remove('rolling');
-        die.textContent = results[i];
-      });
-      document.getElementById('count').value = '1';
-      loadLog();
-    } else {
-      clearInterval(animation);
+  const resultPromise = fetch('/dice', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ count, sides }),
+  });
+
+  setTimeout(async () => {
+    clearInterval(animation);
+    try {
+      const response = await resultPromise;
+      if (response.ok) {
+        const data = await response.json();
+        const results = data.result.split(',').map((n) => n.trim());
+        diceElems.forEach((die, i) => {
+          die.classList.remove('rolling');
+          die.textContent = results[i];
+        });
+        document.getElementById('count').value = '1';
+        loadLog();
+      } else {
+        rollContainer.classList.add('hidden');
+      }
+    } catch (err) {
       rollContainer.classList.add('hidden');
     }
-  } catch (err) {
-    clearInterval(animation);
-    rollContainer.classList.add('hidden');
-  }
+  }, 5000);
 });
 
 async function loadLog() {
