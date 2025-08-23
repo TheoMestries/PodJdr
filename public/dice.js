@@ -54,6 +54,7 @@ document.getElementById('roll-form').addEventListener('submit', async (e) => {
     die.className = 'die rolling';
     die.textContent = '?';
     die.style.clipPath = getDieClipPath(sides);
+
     rollContainer.appendChild(die);
     diceElems.push(die);
   }
