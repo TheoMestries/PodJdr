@@ -1,6 +1,7 @@
 const overlay = document.getElementById('loading-overlay');
 const loadingText = document.getElementById('loading-text');
 const progressBar = document.getElementById('progress-bar');
+const errorBox = document.getElementById('error-box');
 const phases = [
   'Connexion au serveur...',
   'Analyse des identifiants...',
@@ -49,8 +50,18 @@ function hideLoading(finalMessage) {
   }
 }
 
+function showError(message) {
+  errorBox.textContent = message;
+  errorBox.classList.remove('hidden');
+}
+
+function hideError() {
+  errorBox.classList.add('hidden');
+}
+
 document.querySelector('form').addEventListener('submit', async (e) => {
   e.preventDefault();
+  hideError();
   const username = document.getElementById('username').value;
   const password = document.getElementById('password').value;
 
@@ -71,9 +82,9 @@ document.querySelector('form').addEventListener('submit', async (e) => {
         window.location.href = 'hub.html';
       }, 800);
     } else {
-      alert(data.error);
+      showError(data.error);
     }
   } catch (err) {
-    alert('Erreur de connexion');
+    showError('Erreur de connexion');
   }
 });

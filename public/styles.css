@@ -102,6 +102,14 @@ body.auth {
   letter-spacing: 2px;
 }
 
+.error-message {
+  margin-bottom: 15px;
+  padding: 10px;
+  border: 1px solid var(--secondary);
+  background: rgba(255, 0, 153, 0.1);
+  color: var(--secondary);
+}
+
 .login-container label {
   display: block;
   margin-bottom: 5px;
