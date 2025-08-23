@@ -68,10 +68,9 @@ document.querySelector('form').addEventListener('submit', async (e) => {
 
   const data = await res.json();
   if (res.ok) {
-    const { userId } = data;
     hideLoading('Connexion réussie');
     setTimeout(() => {
-      window.location.href = `hub.html?username=${encodeURIComponent(username)}&userId=${encodeURIComponent(userId)}`;
+      window.location.href = 'hub.html';
     }, 800);
   } else {
     hideLoading();

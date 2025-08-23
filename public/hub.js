@@ -1,17 +1,25 @@
-const params = new URLSearchParams(window.location.search);
-const username = params.get('username');
-const userId = params.get('userId');
-
-if (username) {
-  document.getElementById('user-name').textContent = username;
-}
+let username = '';
+let userId = null;
 
 let currentContactId = null;
 let chatInterval = null;
 
+async function init() {
+  const res = await fetch('/me');
+  if (!res.ok) {
+    window.location.href = '/';
+    return;
+  }
+  const data = await res.json();
+  username = data.username;
+  userId = data.userId;
+  document.getElementById('user-name').textContent = username;
+  loadContacts();
+  loadRequests();
+}
+
 async function loadContacts() {
-  if (!userId) return;
-  const res = await fetch(`/contacts?userId=${encodeURIComponent(userId)}`);
+  const res = await fetch('/contacts');
   if (!res.ok) return;
   const contacts = await res.json();
   const list = document.getElementById('contact-list');
@@ -29,7 +37,7 @@ async function loadContacts() {
       await fetch('/contacts', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, contactId: id }),
+        body: JSON.stringify({ contactId: id }),
       });
       loadContacts();
     });
@@ -39,8 +47,7 @@ async function loadContacts() {
 }
 
 async function loadRequests() {
-  if (!userId) return;
-  const res = await fetch(`/contact-requests?userId=${encodeURIComponent(userId)}`);
+  const res = await fetch('/contact-requests');
   if (!res.ok) return;
   const requests = await res.json();
   const list = document.getElementById('request-list');
@@ -54,7 +61,7 @@ async function loadRequests() {
       await fetch('/contacts/accept', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, requesterId }),
+        body: JSON.stringify({ requesterId }),
       });
       loadContacts();
       loadRequests();
@@ -72,7 +79,7 @@ document
     const res = await fetch('/contacts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, contactUsername }),
+      body: JSON.stringify({ contactUsername }),
     });
     const data = await res.json();
     if (res.ok) {
@@ -82,9 +89,6 @@ document
       alert(data.error);
     }
   });
-
-loadContacts();
-loadRequests();
 
 async function openChat(id, username) {
   currentContactId = id;
@@ -97,9 +101,7 @@ async function openChat(id, username) {
 
 async function loadMessages() {
   if (!currentContactId) return;
-  const res = await fetch(
-    `/messages?userId=${encodeURIComponent(userId)}&contactId=${encodeURIComponent(currentContactId)}`
-  );
+  const res = await fetch(`/messages?contactId=${encodeURIComponent(currentContactId)}`);
   if (!res.ok) return;
   const messages = await res.json();
   const list = document.getElementById('message-list');
@@ -127,8 +129,10 @@ document.getElementById('message-form').addEventListener('submit', async (e) => 
   await fetch('/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ senderId: userId, receiverId: currentContactId, content }),
+    body: JSON.stringify({ receiverId: currentContactId, content }),
   });
   input.value = '';
   loadMessages();
 });
+
+init();
