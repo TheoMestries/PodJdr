@@ -8,6 +8,10 @@
   --font-family: 'Orbitron', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+.loading-overlay.hidden {
+  display: none;
+}
+
 /* GLOBAL */
 body {
   margin: 0;
