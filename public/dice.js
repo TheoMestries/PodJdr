@@ -1,6 +1,7 @@
 let username = '';
 
 function polygonPoints(sides) {
+
   const points = [];
   const angleStep = (2 * Math.PI) / sides;
   const offset = -Math.PI / 2;
@@ -22,6 +23,7 @@ function getDiePoints(sides) {
     20: '50,0 85,15 100,40 100,60 85,85 50,100 15,85 0,60 0,40 15,15',
   };
   return shapes[sides] || polygonPoints(sides);
+
 }
 
 async function init() {
@@ -69,6 +71,7 @@ document.getElementById('roll-form').addEventListener('submit', async (e) => {
     text.textContent = '?';
     die.appendChild(text);
 
+
     rollContainer.appendChild(die);
     diceElems.push({ svg: die, text });
   }
@@ -95,6 +98,7 @@ document.getElementById('roll-form').addEventListener('submit', async (e) => {
         diceElems.forEach(({ svg, text }, i) => {
           svg.classList.remove('rolling');
           text.textContent = results[i];
+
         });
         document.getElementById('count').value = '1';
         loadLog();

@@ -363,6 +363,7 @@ body.auth {
   fill: var(--primary);
   font-size: 3rem;
   font-family: var(--font-family);
+
 }
 
 .current-roll .rolling {
