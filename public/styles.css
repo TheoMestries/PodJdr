@@ -351,11 +351,19 @@ body.auth {
 .current-roll .die {
   width: 120px;
   height: 120px;
-  border: 2px solid var(--primary);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: var(--panel-bg);
+}
+
+.current-roll .die-shape {
+  fill: var(--panel-bg);
+  stroke: var(--primary);
+  stroke-width: 2;
+}
+
+.current-roll .die-number {
+  fill: var(--primary);
+  font-size: 3rem;
+  font-family: var(--font-family);
+
 }
 
 .current-roll .rolling {
