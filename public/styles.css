@@ -304,3 +304,39 @@ body.auth {
   text-transform: uppercase;
 }
 
+.dice-container {
+  padding: 20px;
+}
+
+#roll-form {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+#roll-form input,
+#roll-form select {
+  padding: 6px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--primary);
+  color: var(--primary);
+}
+
+#roll-form button {
+  padding: 6px 12px;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  border: none;
+  color: #000;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+
+#dice-log {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+

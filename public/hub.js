@@ -9,6 +9,10 @@ document.getElementById('logout-btn').addEventListener('click', async () => {
   window.location.href = '/';
 });
 
+document.getElementById('dice-btn').addEventListener('click', () => {
+  window.location.href = 'dice.html';
+});
+
 async function init() {
   const res = await fetch('/me');
   if (!res.ok) {
