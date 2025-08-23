@@ -22,6 +22,23 @@ function requireAuth(req, res, next) {
   next();
 }
 
+function handleDbError(err, res) {
+  const connectionCodes = [
+    'ECONNREFUSED',
+    'ER_ACCESS_DENIED_ERROR',
+    'ER_BAD_DB_ERROR',
+    'ENOTFOUND',
+  ];
+
+  if (err && connectionCodes.includes(err.code)) {
+    return res
+      .status(500)
+      .json({ error: 'Erreur de connexion à la base de données' });
+  }
+
+  return res.status(500).json({ error: 'Erreur serveur' });
+}
+
 // Enregistrement d'un nouvel utilisateur
 app.post('/register', async (req, res) => {
   const { username, password } = req.body;
@@ -33,7 +50,7 @@ app.post('/register', async (req, res) => {
     );
     res.status(201).json({ message: 'Utilisateur créé' });
   } catch (err) {
-    res.status(500).json({ error: 'Erreur serveur' });
+    handleDbError(err, res);
   }
 });
 
@@ -55,7 +72,7 @@ app.post('/login', async (req, res) => {
     req.session.username = username;
     res.json({ message: 'Connexion réussie', userId: user.id });
   } catch (err) {
-    res.status(500).json({ error: 'Erreur serveur' });
+    handleDbError(err, res);
   }
 });
 
@@ -71,7 +88,7 @@ app.get('/me', (req, res) => {
 app.post('/logout', (req, res) => {
   req.session.destroy((err) => {
     if (err) {
-      return res.status(500).json({ error: 'Erreur serveur' });
+      return handleDbError(err, res);
     }
     res.clearCookie('connect.sid');
     res.json({ message: 'Déconnexion réussie' });
@@ -88,7 +105,7 @@ app.get('/contacts', requireAuth, async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
-    res.status(500).json({ error: 'Erreur serveur' });
+    handleDbError(err, res);
   }
 });
 
@@ -102,7 +119,7 @@ app.get('/contact-requests', requireAuth, async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
-    res.status(500).json({ error: 'Erreur serveur' });
+    handleDbError(err, res);
   }
 });
 
@@ -125,7 +142,7 @@ app.post('/contacts', requireAuth, async (req, res) => {
     );
     res.status(201).json({ message: 'Demande envoyée' });
   } catch (err) {
-    res.status(500).json({ error: 'Erreur serveur' });
+    handleDbError(err, res);
   }
 });
 
@@ -144,7 +161,7 @@ app.post('/contacts/accept', requireAuth, async (req, res) => {
     );
     res.json({ message: 'Contact accepté' });
   } catch (err) {
-    res.status(500).json({ error: 'Erreur serveur' });
+    handleDbError(err, res);
   }
 });
 
@@ -159,7 +176,7 @@ app.delete('/contacts', requireAuth, async (req, res) => {
     );
     res.json({ message: 'Contact supprimé' });
   } catch (err) {
-    res.status(500).json({ error: 'Erreur serveur' });
+    handleDbError(err, res);
   }
 });
 
@@ -174,7 +191,7 @@ app.get('/messages', requireAuth, async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
-    res.status(500).json({ error: 'Erreur serveur' });
+    handleDbError(err, res);
   }
 });
 
@@ -189,7 +206,7 @@ app.post('/messages', requireAuth, async (req, res) => {
     );
     res.status(201).json({ message: 'Message envoyé' });
   } catch (err) {
-    res.status(500).json({ error: 'Erreur serveur' });
+    handleDbError(err, res);
   }
 });
 

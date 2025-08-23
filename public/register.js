@@ -1,5 +1,17 @@
+const errorBox = document.getElementById('error-box');
+
+function showMessage(message) {
+  errorBox.textContent = message;
+  errorBox.classList.remove('hidden');
+}
+
+function hideMessage() {
+  errorBox.classList.add('hidden');
+}
+
 document.querySelector('form').addEventListener('submit', async (e) => {
   e.preventDefault();
+  hideMessage();
   const username = document.getElementById('username').value;
   const password = document.getElementById('password').value;
 
@@ -10,5 +22,5 @@ document.querySelector('form').addEventListener('submit', async (e) => {
   });
 
   const data = await res.json();
-  alert(data.message || data.error);
+  showMessage(data.message || data.error);
 });
