@@ -1,5 +1,17 @@
 let username = '';
 
+function polygonClipPath(sides) {
+  const points = [];
+  const angleStep = (2 * Math.PI) / sides;
+  const offset = -Math.PI / 2;
+  for (let i = 0; i < sides; i++) {
+    const x = 50 + 50 * Math.cos(offset + i * angleStep);
+    const y = 50 + 50 * Math.sin(offset + i * angleStep);
+    points.push(`${x}% ${y}%`);
+  }
+  return `polygon(${points.join(',')})`;
+}
+
 async function init() {
   const res = await fetch('/me');
   if (!res.ok) {
@@ -29,6 +41,7 @@ document.getElementById('roll-form').addEventListener('submit', async (e) => {
     const die = document.createElement('div');
     die.className = 'die rolling';
     die.textContent = '?';
+    die.style.clipPath = polygonClipPath(sides);
     rollContainer.appendChild(die);
     diceElems.push(die);
   }
@@ -39,30 +52,32 @@ document.getElementById('roll-form').addEventListener('submit', async (e) => {
     });
   }, 100);
 
-  try {
-    const response = await fetch('/dice', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ count, sides }),
-    });
-    if (response.ok) {
-      const data = await response.json();
-      clearInterval(animation);
-      const results = data.result.split(',').map((n) => n.trim());
-      diceElems.forEach((die, i) => {
-        die.classList.remove('rolling');
-        die.textContent = results[i];
-      });
-      document.getElementById('count').value = '1';
-      loadLog();
-    } else {
-      clearInterval(animation);
+  const resultPromise = fetch('/dice', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ count, sides }),
+  });
+
+  setTimeout(async () => {
+    clearInterval(animation);
+    try {
+      const response = await resultPromise;
+      if (response.ok) {
+        const data = await response.json();
+        const results = data.result.split(',').map((n) => n.trim());
+        diceElems.forEach((die, i) => {
+          die.classList.remove('rolling');
+          die.textContent = results[i];
+        });
+        document.getElementById('count').value = '1';
+        loadLog();
+      } else {
+        rollContainer.classList.add('hidden');
+      }
+    } catch (err) {
       rollContainer.classList.add('hidden');
     }
-  } catch (err) {
-    clearInterval(animation);
-    rollContainer.classList.add('hidden');
-  }
+  }, 5000);
 });
 
 async function loadLog() {
