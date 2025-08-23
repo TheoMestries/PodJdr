@@ -54,26 +54,26 @@ document.querySelector('form').addEventListener('submit', async (e) => {
   const username = document.getElementById('username').value;
   const password = document.getElementById('password').value;
 
-  showLoading();
-
-  const delayMs = phases.length * 1000;
-  const [res] = await Promise.all([
-    fetch('/login', {
+  try {
+    const res = await fetch('/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
-    }),
-    new Promise((resolve) => setTimeout(resolve, delayMs)),
-  ]);
+    });
+    const data = await res.json();
 
-  const data = await res.json();
-  if (res.ok) {
-    hideLoading('Connexion réussie');
-    setTimeout(() => {
-      window.location.href = 'hub.html';
-    }, 800);
-  } else {
-    hideLoading();
-    alert(data.error);
+    if (res.ok) {
+      showLoading();
+      const delayMs = phases.length * 1000;
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      hideLoading('Connexion réussie');
+      setTimeout(() => {
+        window.location.href = 'hub.html';
+      }, 800);
+    } else {
+      alert(data.error);
+    }
+  } catch (err) {
+    alert('Erreur de connexion');
   }
 });
