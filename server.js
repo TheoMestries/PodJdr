@@ -67,6 +67,17 @@ app.get('/me', (req, res) => {
   res.json({ userId: req.session.userId, username: req.session.username });
 });
 
+// Déconnexion
+app.post('/logout', (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      return res.status(500).json({ error: 'Erreur serveur' });
+    }
+    res.clearCookie('connect.sid');
+    res.json({ message: 'Déconnexion réussie' });
+  });
+});
+
 // Récupération des contacts d'un utilisateur
 app.get('/contacts', requireAuth, async (req, res) => {
   const userId = req.session.userId;
