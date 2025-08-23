@@ -30,6 +30,24 @@ body::before {
   pointer-events: none;
 }
 
+.hidden {
+  display: none;
+}
+
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(5, 5, 16, 0.9);
+  z-index: 1000;
+  color: var(--primary);
+  font-size: 1.2rem;
+  text-align: center;
+  backdrop-filter: blur(4px);
+}
+
 body.auth {
   display: flex;
   justify-content: center;
