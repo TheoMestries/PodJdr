@@ -4,6 +4,11 @@ let userId = null;
 let currentContactId = null;
 let chatInterval = null;
 
+document.getElementById('logout-btn').addEventListener('click', async () => {
+  await fetch('/logout', { method: 'POST' });
+  window.location.href = '/';
+});
+
 async function init() {
   const res = await fetch('/me');
   if (!res.ok) {

@@ -138,12 +138,23 @@ body.auth {
 
 /* HUB */
 .top-bar {
-  text-align: center;
-  padding: 15px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
   background: var(--panel-bg);
   border-bottom: 1px solid var(--primary);
   box-shadow: 0 0 10px var(--primary);
   backdrop-filter: blur(6px);
+}
+
+.logout-btn {
+  padding: 6px 12px;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  border: none;
+  color: #000;
+  cursor: pointer;
+  text-transform: uppercase;
 }
 
 .hub-container {
