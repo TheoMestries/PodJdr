@@ -340,3 +340,32 @@ body.auth {
   gap: 8px;
 }
 
+.current-roll {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  font-size: 2rem;
+}
+
+.current-roll .die {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--primary);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.current-roll .rolling {
+  animation: roll 0.3s infinite linear;
+}
+
+@keyframes roll {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
