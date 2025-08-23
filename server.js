@@ -1,11 +1,26 @@
 const express = require('express');
 const path = require('path');
 const bcrypt = require('bcryptjs');
+const session = require('express-session');
 const { pool } = require('./db');
 
 const app = express();
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
+app.use(
+  session({
+    secret: 'change-me',
+    resave: false,
+    saveUninitialized: false,
+  })
+);
+
+function requireAuth(req, res, next) {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: 'Non authentifié' });
+  }
+  next();
+}
 
 // Enregistrement d'un nouvel utilisateur
 app.post('/register', async (req, res) => {
@@ -36,15 +51,25 @@ app.post('/login', async (req, res) => {
     const ok = await bcrypt.compare(password, user.password_hash);
     if (!ok) return res.status(401).json({ error: 'Mot de passe incorrect' });
 
+    req.session.userId = user.id;
+    req.session.username = username;
     res.json({ message: 'Connexion réussie', userId: user.id });
   } catch (err) {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
+// Informations sur l'utilisateur connecté
+app.get('/me', (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: 'Non authentifié' });
+  }
+  res.json({ userId: req.session.userId, username: req.session.username });
+});
+
 // Récupération des contacts d'un utilisateur
-app.get('/contacts', async (req, res) => {
-  const { userId } = req.query;
+app.get('/contacts', requireAuth, async (req, res) => {
+  const userId = req.session.userId;
   try {
     const [rows] = await pool.execute(
       `SELECT u.id, u.username FROM contacts c JOIN users u ON c.contact_id = u.id WHERE c.user_id = ? AND c.status = 1`,
@@ -57,8 +82,8 @@ app.get('/contacts', async (req, res) => {
 });
 
 // Récupération des demandes de contact
-app.get('/contact-requests', async (req, res) => {
-  const { userId } = req.query;
+app.get('/contact-requests', requireAuth, async (req, res) => {
+  const userId = req.session.userId;
   try {
     const [rows] = await pool.execute(
       `SELECT u.username, c.user_id AS requesterId FROM contacts c JOIN users u ON c.user_id = u.id WHERE c.contact_id = ? AND c.status = 0`,
@@ -71,8 +96,9 @@ app.get('/contact-requests', async (req, res) => {
 });
 
 // Envoi d'une demande de contact
-app.post('/contacts', async (req, res) => {
-  const { userId, contactUsername } = req.body;
+app.post('/contacts', requireAuth, async (req, res) => {
+  const { contactUsername } = req.body;
+  const userId = req.session.userId;
   try {
     const [users] = await pool.execute(
       'SELECT id FROM users WHERE username = ?',
@@ -93,8 +119,9 @@ app.post('/contacts', async (req, res) => {
 });
 
 // Acceptation d'une demande de contact
-app.post('/contacts/accept', async (req, res) => {
-  const { userId, requesterId } = req.body;
+app.post('/contacts/accept', requireAuth, async (req, res) => {
+  const { requesterId } = req.body;
+  const userId = req.session.userId;
   try {
     await pool.execute(
       'UPDATE contacts SET status = 1 WHERE user_id = ? AND contact_id = ?',
@@ -111,8 +138,9 @@ app.post('/contacts/accept', async (req, res) => {
 });
 
 // Suppression d'un contact
-app.delete('/contacts', async (req, res) => {
-  const { userId, contactId } = req.body;
+app.delete('/contacts', requireAuth, async (req, res) => {
+  const { contactId } = req.body;
+  const userId = req.session.userId;
   try {
     await pool.execute(
       'DELETE FROM contacts WHERE (user_id = ? AND contact_id = ?) OR (user_id = ? AND contact_id = ?)',
@@ -125,8 +153,9 @@ app.delete('/contacts', async (req, res) => {
 });
 
 // Récupération des messages entre deux utilisateurs
-app.get('/messages', async (req, res) => {
-  const { userId, contactId } = req.query;
+app.get('/messages', requireAuth, async (req, res) => {
+  const { contactId } = req.query;
+  const userId = req.session.userId;
   try {
     const [rows] = await pool.execute(
       `SELECT sender_id, receiver_id, content, created_at FROM messages WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?) ORDER BY created_at ASC`,
@@ -139,8 +168,9 @@ app.get('/messages', async (req, res) => {
 });
 
 // Envoi d'un message
-app.post('/messages', async (req, res) => {
-  const { senderId, receiverId, content } = req.body;
+app.post('/messages', requireAuth, async (req, res) => {
+  const { receiverId, content } = req.body;
+  const senderId = req.session.userId;
   try {
     await pool.execute(
       'INSERT INTO messages (sender_id, receiver_id, content) VALUES (?, ?, ?)',
