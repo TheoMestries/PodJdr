@@ -12,6 +12,18 @@ function polygonClipPath(sides) {
   return `polygon(${points.join(',')})`;
 }
 
+function getDieClipPath(sides) {
+  const shapes = {
+    4: 'polygon(50% 0%, 0% 100%, 100% 100%)',
+    6: 'polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)',
+    8: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)',
+    10: 'polygon(50% 0%, 95% 30%, 85% 100%, 15% 100%, 5% 30%)',
+    12: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
+    20: 'polygon(50% 0%, 85% 15%, 100% 40%, 100% 60%, 85% 85%, 50% 100%, 15% 85%, 0% 60%, 0% 40%, 15% 15%)',
+  };
+  return shapes[sides] || polygonClipPath(sides);
+}
+
 async function init() {
   const res = await fetch('/me');
   if (!res.ok) {
@@ -41,7 +53,8 @@ document.getElementById('roll-form').addEventListener('submit', async (e) => {
     const die = document.createElement('div');
     die.className = 'die rolling';
     die.textContent = '?';
-    die.style.clipPath = polygonClipPath(sides);
+    die.style.clipPath = getDieClipPath(sides);
+
     rollContainer.appendChild(die);
     diceElems.push(die);
   }
