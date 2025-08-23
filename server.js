@@ -15,6 +15,8 @@ app.use(
   })
 );
 
+const diceLog = [];
+
 function requireAuth(req, res, next) {
   if (!req.session.userId) {
     return res.status(401).json({ error: 'Non authentifié' });
@@ -208,6 +210,33 @@ app.post('/messages', requireAuth, async (req, res) => {
   } catch (err) {
     handleDbError(err, res);
   }
+});
+
+// Lancer de dés
+app.post('/dice', requireAuth, (req, res) => {
+  const { sides, count } = req.body;
+  const intSides = parseInt(sides, 10);
+  const intCount = parseInt(count, 10);
+  if (!intSides || !intCount || intSides < 1 || intCount < 1) {
+    return res.status(400).json({ error: 'Paramètres invalides' });
+  }
+  const rolls = [];
+  for (let i = 0; i < intCount; i++) {
+    rolls.push(Math.floor(Math.random() * intSides) + 1);
+  }
+  const entry = {
+    username: req.session.username,
+    dice: `${intCount}d${intSides}`,
+    result: rolls.join(', '),
+  };
+  diceLog.push(entry);
+  if (diceLog.length > 50) diceLog.shift();
+  res.json(entry);
+});
+
+// Historique des dés
+app.get('/dice', requireAuth, (req, res) => {
+  res.json(diceLog);
 });
 
 // Page d'erreur 404
