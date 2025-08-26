@@ -443,3 +443,16 @@ body.auth {
   }
 }
 
+/* Stats table */
+#stats-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+#stats-table th,
+#stats-table td {
+  border: 1px solid var(--primary);
+  padding: 8px;
+  text-align: center;
+}
+
