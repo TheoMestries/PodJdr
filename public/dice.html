@@ -10,8 +10,8 @@
   <header class="top-bar">
     <h1 class="logo">POD 2200</h1>
     <div>
-      <button id="back-btn" class="logout-btn">Retour</button>
-      <button id="stats-btn" class="logout-btn" title="Statistiques">📊</button>
+      <button id="back-btn" class="btn">Retour</button>
+      <button id="stats-btn" class="btn" title="Statistiques">📊</button>
     </div>
   </header>
   <main class="dice-container">
@@ -31,12 +31,12 @@
               <option value="100">d100</option>
             </select>
             <input type="number" class="modifier" value="0" placeholder="Bonus/Malus" />
-            <button type="button" class="remove-dice">Supprimer</button>
+            <button type="button" class="btn remove-dice">Supprimer</button>
           </div>
         </div>
         <div class="form-buttons">
-          <button type="button" id="add-dice">Ajouter un type</button>
-          <button type="submit">Lancer</button>
+          <button type="button" id="add-dice" class="btn">Ajouter un type</button>
+          <button type="submit" class="btn">Lancer</button>
         </div>
       </form>
       <div id="current-roll" class="current-roll hidden"></div>
