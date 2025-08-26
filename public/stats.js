@@ -15,20 +15,21 @@ async function loadStats() {
   const res = await fetch('/stats');
   if (!res.ok) return;
   const data = await res.json();
-  const list = document.getElementById('stats-list');
-  list.innerHTML = '';
+  const tableBody = document.querySelector('#stats-table tbody');
+  tableBody.innerHTML = '';
   data.forEach(({ username, dice }) => {
-    const li = document.createElement('li');
-    li.innerHTML = `<strong>${username}</strong>`;
-    const subList = document.createElement('ul');
     dice.forEach(({ sides, rolls, diceRolled, average, max }) => {
-      const subLi = document.createElement('li');
-      subLi.textContent = `d${sides} - Lancés: ${rolls}, Dés lancés: ${diceRolled}, Moyenne par dé: ${average}, Max: ${max}`;
-
-      subList.appendChild(subLi);
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${username}</td>
+        <td>d${sides}</td>
+        <td>${rolls}</td>
+        <td>${diceRolled}</td>
+        <td>${average}</td>
+        <td>${max}</td>
+      `;
+      tableBody.appendChild(tr);
     });
-    li.appendChild(subList);
-    list.appendChild(li);
   });
 }
 
