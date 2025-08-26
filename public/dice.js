@@ -74,6 +74,7 @@ document.getElementById('add-dice').addEventListener('click', () => {
   const first = groups.querySelector('.dice-group');
   const clone = first.cloneNode(true);
   clone.querySelector('.count').value = '1';
+  clone.querySelector('.modifier').value = '0';
   addRemoveListener(clone);
   groups.appendChild(clone);
 });
@@ -89,9 +90,8 @@ document.getElementById('roll-form').addEventListener('submit', async (e) => {
   const groups = Array.from(document.querySelectorAll('.dice-group')).map((g) => ({
     count: parseInt(g.querySelector('.count').value, 10),
     sides: parseInt(g.querySelector('.sides').value, 10),
+    modifier: parseInt(g.querySelector('.modifier').value, 10) || 0,
   }));
-  const modifier =
-    parseInt(document.getElementById('modifier').value, 10) || 0;
 
   const diceElems = [];
   const svgNS = 'http://www.w3.org/2000/svg';
@@ -132,7 +132,7 @@ document.getElementById('roll-form').addEventListener('submit', async (e) => {
       const response = await fetch('/dice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dice: groups, modifier }),
+        body: JSON.stringify({ dice: groups }),
       });
       if (response.ok) {
         const data = await response.json();
