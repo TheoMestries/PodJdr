@@ -108,7 +108,7 @@ document.getElementById('roll-form').addEventListener('submit', async (e) => {
     } catch (err) {
       rollContainer.classList.add('hidden');
     }
-  }, 5000);
+  }, 1500);
 });
 
 async function loadLog() {
