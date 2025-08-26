@@ -4,6 +4,7 @@ let isPnj = false;
 
 let currentContactId = null;
 let chatInterval = null;
+let currentContactIsPnj = false;
 
 document.getElementById('logout-btn').addEventListener('click', async () => {
   await fetch('/logout', { method: 'POST' });
@@ -40,13 +41,11 @@ async function loadContacts() {
   const contacts = await res.json();
   const list = document.getElementById('contact-list');
   list.innerHTML = '';
-  contacts.forEach(({ id, username }) => {
+  contacts.forEach(({ id, username, is_pnj }) => {
     const li = document.createElement('li');
     const span = document.createElement('span');
     span.textContent = username;
-    if (!isPnj) {
-      span.addEventListener('click', () => openChat(id, username));
-    }
+    span.addEventListener('click', () => openChat(id, username, !!is_pnj));
     li.appendChild(span);
     const btn = document.createElement('button');
     btn.textContent = '🗑️';
@@ -112,9 +111,9 @@ document
     }
   });
 
-async function openChat(id, username) {
-  if (isPnj) return;
+async function openChat(id, username, contactIsPnj) {
   currentContactId = id;
+  currentContactIsPnj = contactIsPnj;
   document.getElementById('chat-with').textContent = username;
   document.getElementById('chat-section').classList.remove('hidden');
   await loadMessages();
@@ -123,17 +122,18 @@ async function openChat(id, username) {
 }
 
 async function loadMessages() {
-  if (!currentContactId || isPnj) return;
-  const res = await fetch(`/messages?contactId=${encodeURIComponent(currentContactId)}`);
+  if (!currentContactId) return;
+  const res = await fetch(`/messages?contactId=${encodeURIComponent(currentContactId)}&isPnj=${currentContactIsPnj ? 1 : 0}`);
   if (!res.ok) return;
   const messages = await res.json();
   const list = document.getElementById('message-list');
   list.innerHTML = '';
-  messages.forEach(({ sender_id, content }) => {
+  messages.forEach(({ sender_user_id, sender_pnj_id, content }) => {
     const li = document.createElement('li');
     li.textContent = content;
     li.classList.add('message');
-    if (sender_id == userId) {
+    const senderId = sender_user_id || sender_pnj_id;
+    if (senderId == userId) {
       li.classList.add('sent');
     } else {
       li.classList.add('received');
@@ -143,19 +143,19 @@ async function loadMessages() {
   list.scrollTop = list.scrollHeight;
 }
 
-document.getElementById('message-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  if (!currentContactId || isPnj) return;
-  const input = document.getElementById('message-input');
-  const content = input.value.trim();
-  if (!content) return;
-  await fetch('/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ receiverId: currentContactId, content }),
+  document.getElementById('message-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!currentContactId) return;
+    const input = document.getElementById('message-input');
+    const content = input.value.trim();
+    if (!content) return;
+    await fetch('/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ receiverId: currentContactId, content, isReceiverPnj: currentContactIsPnj }),
+    });
+    input.value = '';
+    loadMessages();
   });
-  input.value = '';
-  loadMessages();
-});
 
 init();
