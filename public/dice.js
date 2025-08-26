@@ -173,12 +173,10 @@ async function loadLog() {
     const modString = modMatch ? modMatch[1] : '';
     const modifier = modMatch ? parseInt(modMatch[1], 10) : 0;
 
-    const totalMatch = result.match(/= (-?\d+)$/);
-    const total = totalMatch ? totalMatch[1] : '';
-
     let coloredResult = result;
     if (rolls && sides) {
       const rollValues = rolls.split(',').map((n) => parseInt(n.trim(), 10));
+      const total = rollValues.reduce((sum, val) => sum + val, 0) + modifier;
       const separator = modifier ? ' + ' : ', ';
       const coloredRolls = rollValues
         .map((val) => {
