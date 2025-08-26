@@ -169,9 +169,15 @@ async function loadLog() {
     const sidesMatch = dice.match(/d(\d+)/);
     const sides = sidesMatch ? parseInt(sidesMatch[1], 10) : null;
 
-    const modMatch = dice.match(/ ([+-]\d+)$/);
-    const modString = modMatch ? modMatch[1] : '';
-    const modifier = modMatch ? parseInt(modMatch[1], 10) : 0;
+    let modMatch = result.match(/ ([+-]\d+) =/);
+    let modString = modMatch ? modMatch[1] : '';
+    let modifier = modMatch ? parseInt(modMatch[1], 10) : 0;
+    if (!modMatch) {
+      modMatch = dice.match(/ ([+-]\d+)$/);
+      modString = modMatch ? modMatch[1] : '';
+      modifier = modMatch ? parseInt(modMatch[1], 10) : 0;
+    }
+
 
     let coloredResult = result;
     if (rolls && sides) {
