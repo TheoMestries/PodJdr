@@ -310,8 +310,14 @@ body.auth {
 
 #roll-form {
   display: flex;
+  flex-direction: column;
   gap: 10px;
   margin-bottom: 20px;
+}
+
+.dice-group {
+  display: flex;
+  gap: 10px;
 }
 
 #roll-form input,

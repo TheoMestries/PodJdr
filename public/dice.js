@@ -42,42 +42,54 @@ document.getElementById('back-btn').addEventListener('click', () => {
   window.location.href = 'hub.html';
 });
 
+document.getElementById('add-dice').addEventListener('click', () => {
+  const groups = document.getElementById('dice-groups');
+  const first = groups.querySelector('.dice-group');
+  const clone = first.cloneNode(true);
+  clone.querySelector('.count').value = '1';
+  groups.appendChild(clone);
+});
+
 document.getElementById('roll-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const count = parseInt(document.getElementById('count').value, 10);
-  const sides = parseInt(document.getElementById('sides').value, 10);
   const rollContainer = document.getElementById('current-roll');
   rollContainer.innerHTML = '';
   rollContainer.classList.remove('hidden');
 
+  const groups = Array.from(document.querySelectorAll('.dice-group')).map((g) => ({
+    count: parseInt(g.querySelector('.count').value, 10),
+    sides: parseInt(g.querySelector('.sides').value, 10),
+  }));
+
   const diceElems = [];
   const svgNS = 'http://www.w3.org/2000/svg';
-  for (let i = 0; i < count; i++) {
-    const die = document.createElementNS(svgNS, 'svg');
-    die.setAttribute('viewBox', '0 0 100 100');
-    die.classList.add('die', 'rolling');
+  groups.forEach(({ count, sides }) => {
+    for (let i = 0; i < count; i++) {
+      const die = document.createElementNS(svgNS, 'svg');
+      die.setAttribute('viewBox', '0 0 100 100');
+      die.classList.add('die', 'rolling');
 
-    const shape = document.createElementNS(svgNS, 'polygon');
-    shape.setAttribute('points', getDiePoints(sides));
-    shape.setAttribute('class', 'die-shape');
-    die.appendChild(shape);
+      const shape = document.createElementNS(svgNS, 'polygon');
+      shape.setAttribute('points', getDiePoints(sides));
+      shape.setAttribute('class', 'die-shape');
+      die.appendChild(shape);
 
-    const text = document.createElementNS(svgNS, 'text');
-    text.setAttribute('x', '50');
-    text.setAttribute('y', '55');
-    text.setAttribute('text-anchor', 'middle');
-    text.setAttribute('dominant-baseline', 'middle');
-    text.setAttribute('class', 'die-number');
-    text.textContent = '?';
-    die.appendChild(text);
+      const text = document.createElementNS(svgNS, 'text');
+      text.setAttribute('x', '50');
+      text.setAttribute('y', '55');
+      text.setAttribute('text-anchor', 'middle');
+      text.setAttribute('dominant-baseline', 'middle');
+      text.setAttribute('class', 'die-number');
+      text.textContent = '?';
+      die.appendChild(text);
 
-
-    rollContainer.appendChild(die);
-    diceElems.push({ svg: die, text });
-  }
+      rollContainer.appendChild(die);
+      diceElems.push({ svg: die, text, sides });
+    }
+  });
 
   const animation = setInterval(() => {
-    diceElems.forEach(({ text }) => {
+    diceElems.forEach(({ sides, text }) => {
       text.textContent = Math.floor(Math.random() * sides) + 1;
     });
   }, 100);
@@ -88,17 +100,18 @@ document.getElementById('roll-form').addEventListener('submit', async (e) => {
       const response = await fetch('/dice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ count, sides }),
+        body: JSON.stringify({ dice: groups }),
       });
       if (response.ok) {
         const data = await response.json();
-        const results = data.result.split(',').map((n) => n.trim());
+        const flatResults = [];
+        data.forEach((r) => {
+          flatResults.push(...r.result.split(',').map((n) => n.trim()));
+        });
         diceElems.forEach(({ svg, text }, i) => {
           svg.classList.remove('rolling');
-          text.textContent = results[i];
-
+          text.textContent = flatResults[i];
         });
-        document.getElementById('count').value = '1';
         loadLog();
       } else {
         rollContainer.classList.add('hidden');
