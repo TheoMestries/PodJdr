@@ -132,8 +132,10 @@ app.get('/contacts', requireAuth, async (req, res) => {
   const userId = req.session.userId;
   try {
     const [rows] = await pool.execute(
-      `SELECT u.id, u.username FROM contacts c JOIN users u ON c.contact_id = u.id WHERE c.user_id = ? AND c.status = 1`,
-      [userId]
+      `SELECT u.id, u.username FROM contacts c JOIN users u ON c.contact_id = u.id WHERE c.user_id = ? AND c.status = 1
+       UNION
+       SELECT p.id, p.name AS username FROM pnj_contacts c JOIN pnjs p ON c.pnj_id = p.id WHERE c.user_id = ?`,
+      [userId, userId]
     );
     res.json(rows);
   } catch (err) {
@@ -188,15 +190,30 @@ app.post('/contacts', requireAuth, async (req, res) => {
       'SELECT id FROM users WHERE username = ?',
       [contactUsername]
     );
-    if (!users.length) {
-      return res.status(404).json({ error: 'Utilisateur introuvable' });
+
+    if (users.length) {
+      const contactId = users[0].id;
+      await pool.execute(
+        'INSERT INTO contacts (user_id, contact_id, status) VALUES (?, ?, 0)',
+        [userId, contactId]
+      );
+      return res.status(201).json({ message: 'Demande envoyée' });
     }
-    const contactId = users[0].id;
-    await pool.execute(
-      'INSERT INTO contacts (user_id, contact_id, status) VALUES (?, ?, 0)',
-      [userId, contactId]
+
+    const [pnjs] = await pool.execute(
+      'SELECT id FROM pnjs WHERE name = ?',
+      [contactUsername]
     );
-    res.status(201).json({ message: 'Demande envoyée' });
+    if (pnjs.length) {
+      const pnjId = pnjs[0].id;
+      await pool.execute(
+        'INSERT INTO pnj_contacts (pnj_id, user_id) VALUES (?, ?)',
+        [pnjId, userId]
+      );
+      return res.status(201).json({ message: 'Contact ajouté' });
+    }
+
+    res.status(404).json({ error: 'Utilisateur introuvable' });
   } catch (err) {
     handleDbError(err, res);
   }

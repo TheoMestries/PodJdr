@@ -103,7 +103,10 @@ document
     const data = await res.json();
     if (res.ok) {
       document.getElementById('contact-username').value = '';
-      loadRequests();
+      loadContacts();
+      if (!isPnj) {
+        loadRequests();
+      }
     } else {
       alert(data.error);
     }
