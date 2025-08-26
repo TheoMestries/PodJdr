@@ -82,16 +82,14 @@ document.getElementById('roll-form').addEventListener('submit', async (e) => {
     });
   }, 100);
 
-  const resultPromise = fetch('/dice', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ count, sides }),
-  });
-
   setTimeout(async () => {
     clearInterval(animation);
     try {
-      const response = await resultPromise;
+      const response = await fetch('/dice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ count, sides }),
+      });
       if (response.ok) {
         const data = await response.json();
         const results = data.result.split(',').map((n) => n.trim());
