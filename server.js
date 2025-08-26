@@ -282,6 +282,9 @@ app.get('/dice', requireAuth, (req, res) => {
 
 // Statistiques des lancers
 app.get('/stats', requireAuth, async (req, res) => {
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 10;
+
   try {
     const [rows] = await pool.execute(
       `SELECT dr.user_id, u.username, dr.sides, dr.dice_count, dr.result
@@ -325,7 +328,28 @@ app.get('/stats', requireAuth, async (req, res) => {
         max: d.maxRoll,
       })),
     }));
-    res.json(result);
+
+    const currentUsername = req.session.username;
+    const currentUserIndex = result.findIndex(
+      (u) => u.username === currentUsername
+    );
+    let currentUserStats = null;
+    if (currentUserIndex !== -1) {
+      currentUserStats = result.splice(currentUserIndex, 1)[0];
+    }
+
+    const totalPlayers = (currentUserStats ? 1 : 0) + result.length;
+    const totalPages = 1 + Math.ceil(result.length / limit);
+
+    let statsPage;
+    if (page === 1) {
+      statsPage = currentUserStats ? [currentUserStats] : [];
+    } else {
+      const start = (page - 2) * limit;
+      statsPage = result.slice(start, start + limit);
+    }
+
+    res.json({ stats: statsPage, page, totalPages });
   } catch (err) {
     handleDbError(err, res);
   }
