@@ -63,12 +63,25 @@ document.getElementById('stats-btn').addEventListener('click', () => {
   window.location.href = 'stats.html';
 });
 
+function updateRemoveButtons() {
+  const groups = document.querySelectorAll('.dice-group');
+  groups.forEach((g) => {
+    const btn = g.querySelector('.remove-dice');
+    if (groups.length > 1) {
+      btn.classList.remove('hidden');
+    } else {
+      btn.classList.add('hidden');
+    }
+  });
+}
+
 function addRemoveListener(group) {
   const btn = group.querySelector('.remove-dice');
   btn.addEventListener('click', () => {
     const groups = document.querySelectorAll('.dice-group');
     if (groups.length > 1) {
       group.remove();
+      updateRemoveButtons();
     }
   });
 }
@@ -81,9 +94,11 @@ document.getElementById('add-dice').addEventListener('click', () => {
   clone.querySelector('.modifier').value = '0';
   addRemoveListener(clone);
   groups.appendChild(clone);
+  updateRemoveButtons();
 });
 
 addRemoveListener(document.querySelector('.dice-group'));
+updateRemoveButtons();
 
 document.getElementById('roll-form').addEventListener('submit', async (e) => {
     e.preventDefault();
