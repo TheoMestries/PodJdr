@@ -82,10 +82,13 @@ document.getElementById('add-dice').addEventListener('click', () => {
 addRemoveListener(document.querySelector('.dice-group'));
 
 document.getElementById('roll-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const rollContainer = document.getElementById('current-roll');
-  rollContainer.innerHTML = '';
-  rollContainer.classList.remove('hidden');
+    e.preventDefault();
+    const rollContainer = document.getElementById('current-roll');
+    const totalContainer = document.getElementById('roll-total');
+    rollContainer.innerHTML = '';
+    rollContainer.classList.remove('hidden');
+    totalContainer.textContent = '';
+    totalContainer.classList.add('hidden');
 
   const groups = Array.from(document.querySelectorAll('.dice-group')).map((g) => ({
     count: parseInt(g.querySelector('.count').value, 10),
@@ -147,6 +150,14 @@ document.getElementById('roll-form').addEventListener('submit', async (e) => {
           const color = getNumberColor(value, sides);
           text.style.fill = color;
         });
+          const totalContainer = document.getElementById('roll-total');
+          totalContainer.innerHTML = '';
+          data.forEach(({ dice, total }) => {
+            const p = document.createElement('p');
+            p.textContent = `${dice} = ${total}`;
+            totalContainer.appendChild(p);
+          });
+          totalContainer.classList.remove('hidden');
         loadLog();
       } else {
         rollContainer.classList.add('hidden');
@@ -163,38 +174,44 @@ async function loadLog() {
   const log = await res.json();
   const list = document.getElementById('dice-log');
   list.innerHTML = '';
-  log.slice(-50).reverse().forEach(({ username, dice, result, rolls }) => {
+    log.slice(-50).reverse().forEach(({ username, dice, result, rolls, modifier, total }) => {
     const li = document.createElement('li');
 
     const sidesMatch = dice.match(/d(\d+)/);
     const sides = sidesMatch ? parseInt(sidesMatch[1], 10) : null;
 
-    let modMatch = result.match(/ ([+-]\d+) =/);
-    let modString = modMatch ? modMatch[1] : '';
-    let modifier = modMatch ? parseInt(modMatch[1], 10) : 0;
-    if (!modMatch) {
-      modMatch = dice.match(/ ([+-]\d+)$/);
-      modString = modMatch ? modMatch[1] : '';
-      modifier = modMatch ? parseInt(modMatch[1], 10) : 0;
-    }
+      let modifierVal = typeof modifier === 'number' ? modifier : 0;
+      let modString = '';
+      if (modifier === undefined) {
+        let modMatch = result.match(/ ([+-]\d+) =/);
+        modString = modMatch ? modMatch[1] : '';
+        modifierVal = modMatch ? parseInt(modMatch[1], 10) : 0;
+        if (!modMatch) {
+          modMatch = dice.match(/ ([+-]\d+)$/);
+          modString = modMatch ? modMatch[1] : '';
+          modifierVal = modMatch ? parseInt(modMatch[1], 10) : 0;
+        }
+      } else if (modifierVal) {
+        modString = modifierVal >= 0 ? `+${modifierVal}` : `${modifierVal}`;
+      }
 
 
-    let coloredResult = result;
-    if (rolls && sides) {
-      const rollValues = rolls.split(',').map((n) => parseInt(n.trim(), 10));
-      const total = rollValues.reduce((sum, val) => sum + val, 0) + modifier;
-      const separator = modifier ? ' + ' : ', ';
-      const coloredRolls = rollValues
-        .map((val) => {
-          const color = getNumberColor(val, sides);
-          return color ? `<span style="color:${color}">${val}</span>` : val;
-        })
-        .join(separator);
+      let coloredResult = result;
+      if (rolls && sides) {
+        const rollValues = rolls.split(',').map((n) => parseInt(n.trim(), 10));
+        const totalVal = typeof total === 'number' ? total : rollValues.reduce((sum, val) => sum + val, 0) + modifierVal;
+        const separator = modifierVal ? ' + ' : ', ';
+        const coloredRolls = rollValues
+          .map((val) => {
+            const color = getNumberColor(val, sides);
+            return color ? `<span style="color:${color}">${val}</span>` : val;
+          })
+          .join(separator);
 
-      coloredResult = modifier
-        ? `${coloredRolls} ${modString} = ${total}`
-        : coloredRolls;
-    }
+        coloredResult = modifierVal
+          ? `${coloredRolls} ${modString} = ${totalVal}`
+          : coloredRolls;
+      }
 
     li.innerHTML = `${username} a lancé ${dice} : ${coloredResult}`;
     list.appendChild(li);
