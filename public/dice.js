@@ -60,6 +60,8 @@ document.getElementById('roll-form').addEventListener('submit', async (e) => {
     count: parseInt(g.querySelector('.count').value, 10),
     sides: parseInt(g.querySelector('.sides').value, 10),
   }));
+  const modifier =
+    parseInt(document.getElementById('modifier').value, 10) || 0;
 
   const diceElems = [];
   const svgNS = 'http://www.w3.org/2000/svg';
@@ -100,13 +102,13 @@ document.getElementById('roll-form').addEventListener('submit', async (e) => {
       const response = await fetch('/dice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dice: groups }),
+        body: JSON.stringify({ dice: groups, modifier }),
       });
       if (response.ok) {
         const data = await response.json();
         const flatResults = [];
         data.forEach((r) => {
-          flatResults.push(...r.result.split(',').map((n) => n.trim()));
+          flatResults.push(...r.rolls.split(',').map((n) => n.trim()));
         });
         diceElems.forEach(({ svg, text }, i) => {
           svg.classList.remove('rolling');

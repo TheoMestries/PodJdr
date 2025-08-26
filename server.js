@@ -229,6 +229,7 @@ app.post('/dice', requireAuth, async (req, res) => {
   }
 
   const entries = [];
+  const modifier = parseInt(req.body.modifier, 10) || 0;
 
   for (const { sides, count } of diceArray) {
     const intSides = parseInt(sides, 10);
@@ -240,10 +241,20 @@ app.post('/dice', requireAuth, async (req, res) => {
     for (let i = 0; i < intCount; i++) {
       rolls.push(Math.floor(Math.random() * intSides) + 1);
     }
+    const sum = rolls.reduce((a, b) => a + b, 0);
+    const modSign = modifier >= 0 ? `+${modifier}` : `${modifier}`;
+    const resultString =
+      modifier !== 0
+        ? `${rolls.join(' + ')} ${modSign} = ${sum + modifier}`
+        : rolls.join(', ');
     const entry = {
       username: req.session.username,
-      dice: `${intCount}d${intSides}`,
-      result: rolls.join(', '),
+      dice:
+        modifier !== 0
+          ? `${intCount}d${intSides} ${modSign}`
+          : `${intCount}d${intSides}`,
+      result: resultString,
+      rolls: rolls.join(', '),
     };
     entries.push(entry);
     diceLog.push(entry);
