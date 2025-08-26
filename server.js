@@ -218,9 +218,9 @@ app.post('/dice', requireAuth, async (req, res) => {
   if (Array.isArray(req.body.dice)) {
     diceArray = req.body.dice;
   } else {
-    const { sides, count } = req.body;
+    const { sides, count, modifier } = req.body;
     if (sides !== undefined && count !== undefined) {
-      diceArray = [{ sides, count }];
+      diceArray = [{ sides, count, modifier }];
     }
   }
 
@@ -229,11 +229,11 @@ app.post('/dice', requireAuth, async (req, res) => {
   }
 
   const entries = [];
-  const modifier = parseInt(req.body.modifier, 10) || 0;
 
-  for (const { sides, count } of diceArray) {
+  for (const { sides, count, modifier } of diceArray) {
     const intSides = parseInt(sides, 10);
     const intCount = parseInt(count, 10);
+    const intModifier = parseInt(modifier, 10) || 0;
     if (!intSides || !intCount || intSides < 1 || intCount < 1) {
       return res.status(400).json({ error: 'Paramètres invalides' });
     }
@@ -242,15 +242,15 @@ app.post('/dice', requireAuth, async (req, res) => {
       rolls.push(Math.floor(Math.random() * intSides) + 1);
     }
     const sum = rolls.reduce((a, b) => a + b, 0);
-    const modSign = modifier >= 0 ? `+${modifier}` : `${modifier}`;
+    const modSign = intModifier >= 0 ? `+${intModifier}` : `${intModifier}`;
     const resultString =
-      modifier !== 0
-        ? `${rolls.join(' + ')} ${modSign} = ${sum + modifier}`
+      intModifier !== 0
+        ? `${rolls.join(' + ')} ${modSign} = ${sum + intModifier}`
         : rolls.join(', ');
     const entry = {
       username: req.session.username,
       dice:
-        modifier !== 0
+        intModifier !== 0
           ? `${intCount}d${intSides} ${modSign}`
           : `${intCount}d${intSides}`,
       result: resultString,
