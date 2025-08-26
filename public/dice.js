@@ -42,13 +42,26 @@ document.getElementById('back-btn').addEventListener('click', () => {
   window.location.href = 'hub.html';
 });
 
+function addRemoveListener(group) {
+  const btn = group.querySelector('.remove-dice');
+  btn.addEventListener('click', () => {
+    const groups = document.querySelectorAll('.dice-group');
+    if (groups.length > 1) {
+      group.remove();
+    }
+  });
+}
+
 document.getElementById('add-dice').addEventListener('click', () => {
   const groups = document.getElementById('dice-groups');
   const first = groups.querySelector('.dice-group');
   const clone = first.cloneNode(true);
   clone.querySelector('.count').value = '1';
+  addRemoveListener(clone);
   groups.appendChild(clone);
 });
+
+addRemoveListener(document.querySelector('.dice-group'));
 
 document.getElementById('roll-form').addEventListener('submit', async (e) => {
   e.preventDefault();
