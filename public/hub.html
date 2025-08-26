@@ -9,8 +9,8 @@
 <body class="hub">
   <header class="top-bar">
     <h1 class="logo">POD 2200</h1>
-    <button id="dice-btn" class="logout-btn">Dés</button>
-    <button id="logout-btn" class="logout-btn">Déconnexion</button>
+    <button id="dice-btn" class="btn">Dés</button>
+    <button id="logout-btn" class="btn">Déconnexion</button>
   </header>
   <div class="hub-container">
     <aside class="sidebar">
@@ -22,7 +22,7 @@
 
       <form id="add-contact-form">
         <input type="text" id="contact-username" placeholder="Nom d'utilisateur" required />
-        <button type="submit">Ajouter</button>
+        <button type="submit" class="btn">Ajouter</button>
       </form>
     </aside>
 
@@ -36,7 +36,7 @@
         <ul id="message-list"></ul>
         <form id="message-form">
           <input type="text" id="message-input" placeholder="Message..." autocomplete="off" required />
-          <button type="submit">Envoyer</button>
+          <button type="submit" class="btn">Envoyer</button>
         </form>
       </section>
     </main>

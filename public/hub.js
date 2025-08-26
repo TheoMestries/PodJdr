@@ -41,7 +41,7 @@ async function loadContacts() {
     li.appendChild(span);
     const btn = document.createElement('button');
     btn.textContent = '🗑️';
-    btn.classList.add('delete-btn');
+    btn.classList.add('btn', 'delete-btn');
     btn.addEventListener('click', async () => {
       await fetch('/contacts', {
         method: 'DELETE',
@@ -66,6 +66,7 @@ async function loadRequests() {
     li.textContent = username + ' ';
     const btn = document.createElement('button');
     btn.textContent = 'Accepter';
+    btn.classList.add('btn');
     btn.addEventListener('click', async () => {
       await fetch('/contacts/accept', {
         method: 'POST',

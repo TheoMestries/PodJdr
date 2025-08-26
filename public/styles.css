@@ -38,6 +38,22 @@ body::before {
   display: none;
 }
 
+.btn {
+  padding: 6px 12px;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  text-transform: uppercase;
+  font-weight: bold;
+  letter-spacing: 2px;
+  border-radius: 8px;
+}
+
+.btn:hover {
+  box-shadow: 0 0 10px var(--secondary), 0 0 20px var(--primary);
+}
+
 .loading-overlay {
   position: fixed;
   inset: 0;
@@ -124,20 +140,9 @@ body.auth {
   color: var(--primary);
 }
 
-.login-container button {
+.login-container .btn {
   width: 100%;
   padding: 10px;
-  background: linear-gradient(90deg, var(--primary), var(--secondary));
-  border: none;
-  color: #000;
-  font-weight: bold;
-  cursor: pointer;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-}
-
-.login-container button:hover {
-  box-shadow: 0 0 10px var(--secondary), 0 0 20px var(--primary);
 }
 
 .login-container a {
@@ -156,14 +161,6 @@ body.auth {
   backdrop-filter: blur(6px);
 }
 
-.logout-btn {
-  padding: 6px 12px;
-  background: linear-gradient(90deg, var(--primary), var(--secondary));
-  border: none;
-  color: #000;
-  cursor: pointer;
-  text-transform: uppercase;
-}
 
 #stats-btn {
   margin-left: 10px;
@@ -216,21 +213,9 @@ body.auth {
   color: var(--primary);
 }
 
-.sidebar button {
-  padding: 6px 12px;
-  background: linear-gradient(90deg, var(--primary), var(--secondary));
-  border: none;
-  color: #000;
-  cursor: pointer;
-  text-transform: uppercase;
-}
-
 .delete-btn {
-  padding: 0;
-  background: none;
-  border: none;
+  padding: 2px 6px;
   color: var(--secondary);
-  cursor: pointer;
 }
 
 .chat-area {
@@ -299,15 +284,6 @@ body.auth {
   color: var(--primary);
 }
 
-#message-form button {
-  padding: 6px 12px;
-  background: linear-gradient(90deg, var(--primary), var(--secondary));
-  border: none;
-  color: #000;
-  cursor: pointer;
-  text-transform: uppercase;
-}
-
 
 .dice-container {
   display: flex;
@@ -370,15 +346,6 @@ body.auth {
 
 .form-buttons button {
   flex: 1;
-}
-
-#roll-form button {
-  padding: 6px 12px;
-  background: linear-gradient(90deg, var(--primary), var(--secondary));
-  border: none;
-  color: #000;
-  cursor: pointer;
-  text-transform: uppercase;
 }
 
 #dice-log {
