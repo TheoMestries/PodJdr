@@ -40,20 +40,20 @@ body::before {
 
 .btn {
   padding: 6px 12px;
-  background: linear-gradient(90deg, var(--primary), var(--secondary));
-  border: none;
-  color: #fff;
-
+  background: none;
+  border: 1px solid var(--primary);
+  color: var(--primary);
   cursor: pointer;
   text-transform: uppercase;
   font-weight: bold;
   letter-spacing: 2px;
   border-radius: 8px;
-
+  transition: background 0.3s, color 0.3s;
 }
 
 .btn:hover {
-  box-shadow: 0 0 10px var(--secondary), 0 0 20px var(--primary);
+  background: var(--primary);
+  color: var(--dark-bg);
 }
 
 .loading-overlay {
@@ -218,6 +218,12 @@ body.auth {
 .delete-btn {
   padding: 2px 6px;
   color: var(--secondary);
+  border-color: var(--secondary);
+}
+
+.delete-btn:hover {
+  background: var(--secondary);
+  color: var(--dark-bg);
 }
 
 .chat-area {
