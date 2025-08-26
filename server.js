@@ -214,32 +214,51 @@ app.post('/messages', requireAuth, async (req, res) => {
 
 // Lancer de dés
 app.post('/dice', requireAuth, async (req, res) => {
-  const { sides, count } = req.body;
-  const intSides = parseInt(sides, 10);
-  const intCount = parseInt(count, 10);
-  if (!intSides || !intCount || intSides < 1 || intCount < 1) {
+  let diceArray = [];
+  if (Array.isArray(req.body.dice)) {
+    diceArray = req.body.dice;
+  } else {
+    const { sides, count } = req.body;
+    if (sides !== undefined && count !== undefined) {
+      diceArray = [{ sides, count }];
+    }
+  }
+
+  if (!diceArray.length) {
     return res.status(400).json({ error: 'Paramètres invalides' });
   }
-  const rolls = [];
-  for (let i = 0; i < intCount; i++) {
-    rolls.push(Math.floor(Math.random() * intSides) + 1);
+
+  const entries = [];
+
+  for (const { sides, count } of diceArray) {
+    const intSides = parseInt(sides, 10);
+    const intCount = parseInt(count, 10);
+    if (!intSides || !intCount || intSides < 1 || intCount < 1) {
+      return res.status(400).json({ error: 'Paramètres invalides' });
+    }
+    const rolls = [];
+    for (let i = 0; i < intCount; i++) {
+      rolls.push(Math.floor(Math.random() * intSides) + 1);
+    }
+    const entry = {
+      username: req.session.username,
+      dice: `${intCount}d${intSides}`,
+      result: rolls.join(', '),
+    };
+    entries.push(entry);
+    diceLog.push(entry);
+    if (diceLog.length > 50) diceLog.shift();
+    try {
+      await pool.execute(
+        'INSERT INTO dice_rolls (user_id, sides, dice_count, result) VALUES (?, ?, ?, ?)',
+        [req.session.userId, intSides, intCount, entry.result]
+      );
+    } catch (err) {
+      return handleDbError(err, res);
+    }
   }
-  const entry = {
-    username: req.session.username,
-    dice: `${intCount}d${intSides}`,
-    result: rolls.join(', '),
-  };
-  diceLog.push(entry);
-  if (diceLog.length > 50) diceLog.shift();
-  try {
-    await pool.execute(
-      'INSERT INTO dice_rolls (user_id, sides, dice_count, result) VALUES (?, ?, ?, ?)',
-      [req.session.userId, intSides, intCount, entry.result]
-    );
-  } catch (err) {
-    return handleDbError(err, res);
-  }
-  res.json(entry);
+
+  res.json(entries);
 });
 
 // Historique des dés
