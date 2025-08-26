@@ -163,9 +163,36 @@ async function loadLog() {
   const log = await res.json();
   const list = document.getElementById('dice-log');
   list.innerHTML = '';
-  log.slice(-50).reverse().forEach(({ username, dice, result }) => {
+  log.slice(-50).reverse().forEach(({ username, dice, result, rolls }) => {
     const li = document.createElement('li');
-    li.textContent = `${username} a lancé ${dice} : ${result}`;
+
+    const sidesMatch = dice.match(/d(\d+)/);
+    const sides = sidesMatch ? parseInt(sidesMatch[1], 10) : null;
+
+    const modMatch = dice.match(/ ([+-]\d+)$/);
+    const modString = modMatch ? modMatch[1] : '';
+    const modifier = modMatch ? parseInt(modMatch[1], 10) : 0;
+
+    const totalMatch = result.match(/= (-?\d+)$/);
+    const total = totalMatch ? totalMatch[1] : '';
+
+    let coloredResult = result;
+    if (rolls && sides) {
+      const rollValues = rolls.split(',').map((n) => parseInt(n.trim(), 10));
+      const separator = modifier ? ' + ' : ', ';
+      const coloredRolls = rollValues
+        .map((val) => {
+          const color = getNumberColor(val, sides);
+          return color ? `<span style="color:${color}">${val}</span>` : val;
+        })
+        .join(separator);
+
+      coloredResult = modifier
+        ? `${coloredRolls} ${modString} = ${total}`
+        : coloredRolls;
+    }
+
+    li.innerHTML = `${username} a lancé ${dice} : ${coloredResult}`;
     list.appendChild(li);
   });
 }
