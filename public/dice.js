@@ -26,6 +26,23 @@ function getDiePoints(sides) {
 
 }
 
+function getNumberColor(value, sides) {
+  if (sides === 100) {
+    if (value <= 10) {
+      const intensity = Math.round(((11 - value) * 255) / 10);
+      return `rgb(0, ${intensity}, 0)`;
+    }
+    if (value >= 90) {
+      const intensity = Math.round(((value - 89) * 255) / 11);
+      return `rgb(${intensity}, 0, 0)`;
+    }
+    return '';
+  }
+  if (value === 1) return 'red';
+  if (value === sides) return 'green';
+  return '';
+}
+
 async function init() {
   const res = await fetch('/me');
   if (!res.ok) {
@@ -123,9 +140,12 @@ document.getElementById('roll-form').addEventListener('submit', async (e) => {
         data.forEach((r) => {
           flatResults.push(...r.rolls.split(',').map((n) => n.trim()));
         });
-        diceElems.forEach(({ svg, text }, i) => {
+        diceElems.forEach(({ svg, text, sides }, i) => {
           svg.classList.remove('rolling');
-          text.textContent = flatResults[i];
+          const value = parseInt(flatResults[i], 10);
+          text.textContent = value;
+          const color = getNumberColor(value, sides);
+          text.style.fill = color;
         });
         loadLog();
       } else {
