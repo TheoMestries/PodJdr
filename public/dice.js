@@ -59,6 +59,10 @@ document.getElementById('back-btn').addEventListener('click', () => {
   window.location.href = 'hub.html';
 });
 
+document.getElementById('stats-btn').addEventListener('click', () => {
+  window.location.href = 'stats.html';
+});
+
 function addRemoveListener(group) {
   const btn = group.querySelector('.remove-dice');
   btn.addEventListener('click', () => {
