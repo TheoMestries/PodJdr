@@ -280,6 +280,51 @@ app.get('/dice', requireAuth, (req, res) => {
   res.json(diceLog);
 });
 
+// Statistiques des lancers
+app.get('/stats', requireAuth, async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      `SELECT dr.user_id, u.username, dr.sides, dr.dice_count, dr.result
+       FROM dice_rolls dr
+       JOIN users u ON dr.user_id = u.id`
+    );
+    const stats = {};
+    for (const row of rows) {
+      if (!stats[row.user_id]) {
+        stats[row.user_id] = {
+          username: row.username,
+          rolls: 0,
+          diceRolled: 0,
+          totalSum: 0,
+          maxRoll: 0,
+        };
+      }
+      const userStat = stats[row.user_id];
+      const numbers = row.result.match(/-?\d+/g) || [];
+      let total = 0;
+      if (row.result.includes('=')) {
+        total = parseInt(numbers[numbers.length - 1], 10);
+      } else {
+        total = numbers.reduce((sum, n) => sum + parseInt(n, 10), 0);
+      }
+      userStat.rolls += 1;
+      userStat.diceRolled += row.dice_count;
+      userStat.totalSum += total;
+      if (total > userStat.maxRoll) userStat.maxRoll = total;
+    }
+    const result = Object.values(stats).map((s) => ({
+      username: s.username,
+      rolls: s.rolls,
+      diceRolled: s.diceRolled,
+      average: s.rolls ? +(s.totalSum / s.rolls).toFixed(2) : 0,
+      max: s.maxRoll,
+    }));
+    res.json(result);
+  } catch (err) {
+    handleDbError(err, res);
+  }
+});
+
 // Page d'erreur 404
 app.use((req, res) => {
   res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));

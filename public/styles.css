@@ -165,6 +165,10 @@ body.auth {
   text-transform: uppercase;
 }
 
+#stats-btn {
+  margin-left: 10px;
+}
+
 .hub-container {
   display: flex;
   height: calc(100vh - 70px);
