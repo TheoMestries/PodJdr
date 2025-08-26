@@ -242,10 +242,11 @@ app.post('/dice', requireAuth, async (req, res) => {
       rolls.push(Math.floor(Math.random() * intSides) + 1);
     }
     const sum = rolls.reduce((a, b) => a + b, 0);
+    const total = sum + intModifier;
     const modSign = intModifier >= 0 ? `+${intModifier}` : `${intModifier}`;
     const resultString =
       intModifier !== 0
-        ? `${rolls.join(' + ')} ${modSign} = ${sum + intModifier}`
+        ? `${rolls.join(' + ')} ${modSign} = ${total}`
         : rolls.join(', ');
     const entry = {
       username: req.session.username,
@@ -255,6 +256,8 @@ app.post('/dice', requireAuth, async (req, res) => {
           : `${intCount}d${intSides}`,
       result: resultString,
       rolls: rolls.join(', '),
+      modifier: intModifier,
+      total,
     };
     entries.push(entry);
     diceLog.push(entry);
