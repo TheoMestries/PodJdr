@@ -120,7 +120,7 @@ app.get('/contacts', requireAuth, async (req, res) => {
   if (req.session.pnjId) {
     try {
       const [rows] = await pool.execute(
-        `SELECT u.id, u.username FROM pnj_contacts c JOIN users u ON c.user_id = u.id WHERE c.pnj_id = ?`,
+        `SELECT u.id, u.username, 0 AS is_pnj FROM pnj_contacts c JOIN users u ON c.user_id = u.id WHERE c.pnj_id = ?`,
         [req.session.pnjId]
       );
       return res.json(rows);
@@ -132,9 +132,9 @@ app.get('/contacts', requireAuth, async (req, res) => {
   const userId = req.session.userId;
   try {
     const [rows] = await pool.execute(
-      `SELECT u.id, u.username FROM contacts c JOIN users u ON c.contact_id = u.id WHERE c.user_id = ? AND c.status = 1
+      `SELECT u.id, u.username, 0 AS is_pnj FROM contacts c JOIN users u ON c.contact_id = u.id WHERE c.user_id = ? AND c.status = 1
        UNION
-       SELECT p.id, p.name AS username FROM pnj_contacts c JOIN pnjs p ON c.pnj_id = p.id WHERE c.user_id = ?`,
+       SELECT p.id, p.name AS username, 1 AS is_pnj FROM pnj_contacts c JOIN pnjs p ON c.pnj_id = p.id WHERE c.user_id = ?`,
       [userId, userId]
     );
     res.json(rows);
@@ -269,13 +269,31 @@ app.delete('/contacts', requireAuth, async (req, res) => {
   }
 });
 
-// Récupération des messages entre deux utilisateurs
+// Récupération des messages entre deux contacts
 app.get('/messages', requireAuth, async (req, res) => {
-  const { contactId } = req.query;
-  const userId = req.session.userId;
+  const { contactId, isPnj } = req.query;
+
   try {
+    if (req.session.pnjId) {
+      const pnjId = req.session.pnjId;
+      const [rows] = await pool.execute(
+        `SELECT sender_user_id, sender_pnj_id, receiver_user_id, receiver_pnj_id, content, created_at FROM messages WHERE (sender_pnj_id = ? AND receiver_user_id = ?) OR (sender_user_id = ? AND receiver_pnj_id = ?) ORDER BY created_at ASC`,
+        [pnjId, contactId, contactId, pnjId]
+      );
+      return res.json(rows);
+    }
+
+    const userId = req.session.userId;
+    if (isPnj === '1') {
+      const [rows] = await pool.execute(
+        `SELECT sender_user_id, sender_pnj_id, receiver_user_id, receiver_pnj_id, content, created_at FROM messages WHERE (sender_user_id = ? AND receiver_pnj_id = ?) OR (sender_pnj_id = ? AND receiver_user_id = ?) ORDER BY created_at ASC`,
+        [userId, contactId, contactId, userId]
+      );
+      return res.json(rows);
+    }
+
     const [rows] = await pool.execute(
-      `SELECT sender_id, receiver_id, content, created_at FROM messages WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?) ORDER BY created_at ASC`,
+      `SELECT sender_user_id, sender_pnj_id, receiver_user_id, receiver_pnj_id, content, created_at FROM messages WHERE (sender_user_id = ? AND receiver_user_id = ?) OR (sender_user_id = ? AND receiver_user_id = ?) ORDER BY created_at ASC`,
       [userId, contactId, contactId, userId]
     );
     res.json(rows);
@@ -286,12 +304,17 @@ app.get('/messages', requireAuth, async (req, res) => {
 
 // Envoi d'un message
 app.post('/messages', requireAuth, async (req, res) => {
-  const { receiverId, content } = req.body;
-  const senderId = req.session.userId;
+  const { receiverId, content, isReceiverPnj } = req.body;
+
+  const senderUserId = req.session.userId || null;
+  const senderPnjId = req.session.pnjId || null;
+  const receiverUserId = isReceiverPnj ? null : receiverId;
+  const receiverPnjId = isReceiverPnj ? receiverId : null;
+
   try {
     await pool.execute(
-      'INSERT INTO messages (sender_id, receiver_id, content) VALUES (?, ?, ?)',
-      [senderId, receiverId, content]
+      'INSERT INTO messages (sender_user_id, sender_pnj_id, receiver_user_id, receiver_pnj_id, content) VALUES (?, ?, ?, ?, ?)',
+      [senderUserId, senderPnjId, receiverUserId, receiverPnjId, content]
     );
     res.status(201).json({ message: 'Message envoyé' });
   } catch (err) {

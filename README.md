@@ -59,3 +59,25 @@ CREATE TABLE pnj_contacts (
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
 ```
+
+## Messagerie PNJ
+
+Les PNJ peuvent désormais converser avec les joueurs. Les messages sont
+enregistrés dans la table `messages` avec des colonnes permettant d'identifier
+si l'expéditeur ou le destinataire est un utilisateur ou un PNJ :
+
+```sql
+CREATE TABLE messages (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  sender_user_id INT,
+  sender_pnj_id INT,
+  receiver_user_id INT,
+  receiver_pnj_id INT,
+  content TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (sender_user_id) REFERENCES users(id),
+  FOREIGN KEY (sender_pnj_id) REFERENCES pnjs(id),
+  FOREIGN KEY (receiver_user_id) REFERENCES users(id),
+  FOREIGN KEY (receiver_pnj_id) REFERENCES pnjs(id)
+);
+```
