@@ -24,6 +24,13 @@ function requireAuth(req, res, next) {
   next();
 }
 
+function requireAdmin(req, res, next) {
+  if (!req.session.userId || !req.session.isAdmin) {
+    return res.status(403).json({ error: 'Accès interdit' });
+  }
+  next();
+}
+
 function handleDbError(err, res) {
   const connectionCodes = [
     'ECONNREFUSED',
@@ -61,7 +68,7 @@ app.post('/login', async (req, res) => {
   const { username, password } = req.body;
   try {
     const [rows] = await pool.execute(
-      'SELECT id, password_hash FROM users WHERE username = ?',
+      'SELECT id, password_hash, is_admin FROM users WHERE username = ?',
       [username]
     );
     if (!rows.length) return res.status(401).json({ error: 'Identifiant inconnu' });
@@ -72,7 +79,12 @@ app.post('/login', async (req, res) => {
 
     req.session.userId = user.id;
     req.session.username = username;
-    res.json({ message: 'Connexion réussie', userId: user.id });
+    req.session.isAdmin = user.is_admin === 1;
+    res.json({
+      message: 'Connexion réussie',
+      userId: user.id,
+      isAdmin: req.session.isAdmin,
+    });
   } catch (err) {
     handleDbError(err, res);
   }
@@ -83,7 +95,11 @@ app.get('/me', (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ error: 'Non authentifié' });
   }
-  res.json({ userId: req.session.userId, username: req.session.username });
+  res.json({
+    userId: req.session.userId,
+    username: req.session.username,
+    isAdmin: !!req.session.isAdmin,
+  });
 });
 
 // Déconnexion
@@ -350,6 +366,55 @@ app.get('/stats', requireAuth, async (req, res) => {
     }
 
     res.json({ stats: statsPage, page, totalPages });
+  } catch (err) {
+    handleDbError(err, res);
+  }
+});
+
+// Gestion des PNJ (admin)
+app.get('/admin/pnjs', requireAdmin, async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      'SELECT id, name, description FROM pnjs'
+    );
+    res.json(rows);
+  } catch (err) {
+    handleDbError(err, res);
+  }
+});
+
+app.post('/admin/pnjs', requireAdmin, async (req, res) => {
+  const { name, description } = req.body;
+  try {
+    await pool.execute(
+      'INSERT INTO pnjs (name, description) VALUES (?, ?)',
+      [name, description]
+    );
+    res.status(201).json({ message: 'PNJ créé' });
+  } catch (err) {
+    handleDbError(err, res);
+  }
+});
+
+app.put('/admin/pnjs/:id', requireAdmin, async (req, res) => {
+  const { id } = req.params;
+  const { name, description } = req.body;
+  try {
+    await pool.execute(
+      'UPDATE pnjs SET name = ?, description = ? WHERE id = ?',
+      [name, description, id]
+    );
+    res.json({ message: 'PNJ mis à jour' });
+  } catch (err) {
+    handleDbError(err, res);
+  }
+});
+
+app.delete('/admin/pnjs/:id', requireAdmin, async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.execute('DELETE FROM pnjs WHERE id = ?', [id]);
+    res.json({ message: 'PNJ supprimé' });
   } catch (err) {
     handleDbError(err, res);
   }

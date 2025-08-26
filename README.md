@@ -28,3 +28,20 @@ CREATE TABLE dice_rolls (
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
 ```
+
+## Administration et PNJ
+
+Un champ `is_admin` (TINYINT) peut être ajouté à la table `users` pour
+identifier les administrateurs. Les comptes PNJ sont stockés séparément dans la
+table :
+
+```sql
+CREATE TABLE pnjs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  description TEXT
+);
+```
+
+Les routes `/admin/pnjs` permettent aux administrateurs connectés de créer,
+lister, modifier et supprimer ces comptes PNJ.

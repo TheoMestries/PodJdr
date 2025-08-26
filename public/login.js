@@ -79,7 +79,8 @@ document.querySelector('form').addEventListener('submit', async (e) => {
       await new Promise((resolve) => setTimeout(resolve, delayMs));
       hideLoading('Connexion réussie');
       setTimeout(() => {
-        window.location.href = 'hub.html';
+        const dest = data.isAdmin ? 'admin.html' : 'hub.html';
+        window.location.href = dest;
       }, 800);
     } else {
       showError(data.error);

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>POD 2200 - Admin</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="hub">
+  <header class="top-bar">
+    <h1 class="logo">POD 2200</h1>
+    <button id="logout-btn" class="btn">Déconnexion</button>
+  </header>
+
+  <main class="hub-container">
+    <section>
+      <h2>PNJ</h2>
+      <ul id="pnj-list"></ul>
+      <form id="pnj-form">
+        <input type="text" id="pnj-name" placeholder="Nom" required />
+        <input type="text" id="pnj-description" placeholder="Description" />
+        <button type="submit" class="btn">Ajouter</button>
+      </form>
+    </section>
+  </main>
+
+  <script src="admin.js"></script>
+</body>
+</html>
+
