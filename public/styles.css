@@ -304,20 +304,52 @@ body.auth {
   text-transform: uppercase;
 }
 
+
 .dice-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
   padding: 20px;
+}
+
+.dice-panel,
+.log-panel {
+  flex: 1;
+  min-width: 300px;
+  background: var(--panel-bg);
+  border: 1px solid var(--primary);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.dice-panel h2,
+.log-panel h2 {
+  margin-top: 0;
+  text-align: center;
+  color: var(--secondary);
 }
 
 #roll-form {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 15px;
   margin-bottom: 20px;
 }
 
 .dice-group {
   display: flex;
   gap: 10px;
+  align-items: center;
+}
+
+.dice-group .count {
+  width: 60px;
+}
+
+.modifier-group {
+  display: flex;
+  gap: 10px;
+  align-items: center;
 }
 
 #roll-form input,
@@ -326,6 +358,16 @@ body.auth {
   background: rgba(0, 0, 0, 0.4);
   border: 1px solid var(--primary);
   color: var(--primary);
+}
+
+.form-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.form-buttons button {
+  flex: 1;
 }
 
 #roll-form button {
@@ -344,6 +386,14 @@ body.auth {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+#dice-log li {
+  background: rgba(0, 0, 0, 0.4);
+  padding: 6px 8px;
+  border-left: 2px solid var(--secondary);
 }
 
 .current-roll {

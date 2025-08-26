@@ -12,30 +12,38 @@
     <button id="back-btn" class="logout-btn">Retour</button>
   </header>
   <main class="dice-container">
-    <form id="roll-form">
-      <div id="dice-groups">
-        <div class="dice-group">
-          <input type="number" class="count" min="1" value="1" />
-          <select class="sides">
-            <option value="4">d4</option>
-            <option value="6" selected>d6</option>
-            <option value="8">d8</option>
-            <option value="10">d10</option>
-            <option value="12">d12</option>
-            <option value="20">d20</option>
-            <option value="100">d100</option>
-          </select>
+    <section class="dice-panel">
+      <h2>Lancer des dés</h2>
+      <form id="roll-form">
+        <div id="dice-groups">
+          <div class="dice-group">
+            <input type="number" class="count" min="1" value="1" />
+            <select class="sides">
+              <option value="4">d4</option>
+              <option value="6" selected>d6</option>
+              <option value="8">d8</option>
+              <option value="10">d10</option>
+              <option value="12">d12</option>
+              <option value="20">d20</option>
+              <option value="100">d100</option>
+            </select>
+          </div>
         </div>
-      </div>
-      <div class="modifier-group">
-        <label for="modifier">Bonus/Malus :</label>
-        <input type="number" id="modifier" value="0" />
-      </div>
-      <button type="button" id="add-dice">Ajouter un type</button>
-      <button type="submit">Lancer</button>
-    </form>
-    <div id="current-roll" class="current-roll hidden"></div>
-    <ul id="dice-log"></ul>
+        <div class="modifier-group">
+          <label for="modifier">Bonus/Malus :</label>
+          <input type="number" id="modifier" value="0" />
+        </div>
+        <div class="form-buttons">
+          <button type="button" id="add-dice">Ajouter un type</button>
+          <button type="submit">Lancer</button>
+        </div>
+      </form>
+      <div id="current-roll" class="current-roll hidden"></div>
+    </section>
+    <section class="log-panel">
+      <h2>Historique</h2>
+      <ul id="dice-log"></ul>
+    </section>
   </main>
   <script src="dice.js"></script>
 </body>
