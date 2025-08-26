@@ -227,6 +227,10 @@ body.auth {
   color: var(--dark-bg);
 }
 
+.pnj-link {
+  cursor: pointer;
+}
+
 .chat-area {
   flex: 1;
   display: flex;

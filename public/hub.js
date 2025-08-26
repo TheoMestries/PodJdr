@@ -1,5 +1,6 @@
 let username = '';
 let userId = null;
+let isPnj = false;
 
 let currentContactId = null;
 let chatInterval = null;
@@ -21,10 +22,16 @@ async function init() {
   }
   const data = await res.json();
   username = data.username;
-  userId = data.userId;
+  userId = data.userId || data.pnjId;
+  isPnj = data.isPnj;
   document.getElementById('user-name').textContent = username;
   loadContacts();
-  loadRequests();
+  if (!isPnj) {
+    loadRequests();
+  } else {
+    document.getElementById('request-list').previousElementSibling.classList.add('hidden');
+    document.getElementById('request-list').classList.add('hidden');
+  }
 }
 
 async function loadContacts() {
@@ -37,7 +44,9 @@ async function loadContacts() {
     const li = document.createElement('li');
     const span = document.createElement('span');
     span.textContent = username;
-    span.addEventListener('click', () => openChat(id, username));
+    if (!isPnj) {
+      span.addEventListener('click', () => openChat(id, username));
+    }
     li.appendChild(span);
     const btn = document.createElement('button');
     btn.textContent = '🗑️';
@@ -74,7 +83,7 @@ async function loadRequests() {
         body: JSON.stringify({ requesterId }),
       });
       loadContacts();
-      loadRequests();
+      if (!isPnj) loadRequests();
     });
     li.appendChild(btn);
     list.appendChild(li);
@@ -101,6 +110,7 @@ document
   });
 
 async function openChat(id, username) {
+  if (isPnj) return;
   currentContactId = id;
   document.getElementById('chat-with').textContent = username;
   document.getElementById('chat-section').classList.remove('hidden');
@@ -110,7 +120,7 @@ async function openChat(id, username) {
 }
 
 async function loadMessages() {
-  if (!currentContactId) return;
+  if (!currentContactId || isPnj) return;
   const res = await fetch(`/messages?contactId=${encodeURIComponent(currentContactId)}`);
   if (!res.ok) return;
   const messages = await res.json();
@@ -132,7 +142,7 @@ async function loadMessages() {
 
 document.getElementById('message-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  if (!currentContactId) return;
+  if (!currentContactId || isPnj) return;
   const input = document.getElementById('message-input');
   const content = input.value.trim();
   if (!content) return;
