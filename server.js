@@ -213,7 +213,7 @@ app.post('/messages', requireAuth, async (req, res) => {
 });
 
 // Lancer de dés
-app.post('/dice', requireAuth, (req, res) => {
+app.post('/dice', requireAuth, async (req, res) => {
   const { sides, count } = req.body;
   const intSides = parseInt(sides, 10);
   const intCount = parseInt(count, 10);
@@ -231,6 +231,14 @@ app.post('/dice', requireAuth, (req, res) => {
   };
   diceLog.push(entry);
   if (diceLog.length > 50) diceLog.shift();
+  try {
+    await pool.execute(
+      'INSERT INTO dice_rolls (user_id, sides, dice_count, result) VALUES (?, ?, ?, ?)',
+      [req.session.userId, intSides, intCount, entry.result]
+    );
+  } catch (err) {
+    return handleDbError(err, res);
+  }
   res.json(entry);
 });
 
