@@ -178,6 +178,7 @@ async function loadLog() {
       modifier = modMatch ? parseInt(modMatch[1], 10) : 0;
     }
 
+
     let coloredResult = result;
     if (rolls && sides) {
       const rollValues = rolls.split(',').map((n) => parseInt(n.trim(), 10));
