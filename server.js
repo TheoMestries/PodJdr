@@ -311,6 +311,7 @@ app.get('/stats', requireAuth, async (req, res) => {
       diceStat.rolls += 1;
       diceStat.diceRolled += row.dice_count;
       diceStat.totalSum += diceSum;
+
       if (total > diceStat.maxRoll) diceStat.maxRoll = total;
     }
     const result = Object.values(stats).map((u) => ({
@@ -320,6 +321,7 @@ app.get('/stats', requireAuth, async (req, res) => {
         rolls: d.rolls,
         diceRolled: d.diceRolled,
         average: d.diceRolled ? +(d.totalSum / d.diceRolled).toFixed(2) : 0,
+
         max: d.maxRoll,
       })),
     }));
