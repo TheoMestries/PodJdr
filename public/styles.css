@@ -42,11 +42,14 @@ body::before {
   padding: 6px 12px;
   background: linear-gradient(90deg, var(--primary), var(--secondary));
   border: none;
-  color: #000;
+  color: #fff;
+
   cursor: pointer;
   text-transform: uppercase;
   font-weight: bold;
   letter-spacing: 2px;
+  border-radius: 8px;
+
 }
 
 .btn:hover {
