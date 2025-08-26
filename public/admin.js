@@ -25,7 +25,14 @@ async function loadPnjs() {
   list.innerHTML = '';
   pnjs.forEach(({ id, name, description }) => {
     const li = document.createElement('li');
-    li.textContent = `${name} - ${description || ''}`;
+    const span = document.createElement('span');
+    span.textContent = `${name} - ${description || ''}`;
+    span.classList.add('pnj-link');
+    span.addEventListener('click', async () => {
+      await fetch(`/admin/pnjs/${id}/impersonate`, { method: 'POST' });
+      window.location.href = '/hub.html';
+    });
+    li.appendChild(span);
     const btn = document.createElement('button');
     btn.textContent = '🗑️';
     btn.classList.add('btn', 'delete-btn');

@@ -18,7 +18,7 @@ app.use(
 const diceLog = [];
 
 function requireAuth(req, res, next) {
-  if (!req.session.userId) {
+  if (!req.session.userId && !req.session.pnjId) {
     return res.status(401).json({ error: 'Non authentifié' });
   }
   next();
@@ -92,13 +92,15 @@ app.post('/login', async (req, res) => {
 
 // Informations sur l'utilisateur connecté
 app.get('/me', (req, res) => {
-  if (!req.session.userId) {
+  if (!req.session.userId && !req.session.pnjId) {
     return res.status(401).json({ error: 'Non authentifié' });
   }
   res.json({
-    userId: req.session.userId,
+    userId: req.session.userId || null,
+    pnjId: req.session.pnjId || null,
     username: req.session.username,
     isAdmin: !!req.session.isAdmin,
+    isPnj: !!req.session.pnjId,
   });
 });
 
@@ -115,6 +117,18 @@ app.post('/logout', (req, res) => {
 
 // Récupération des contacts d'un utilisateur
 app.get('/contacts', requireAuth, async (req, res) => {
+  if (req.session.pnjId) {
+    try {
+      const [rows] = await pool.execute(
+        `SELECT u.id, u.username FROM pnj_contacts c JOIN users u ON c.user_id = u.id WHERE c.pnj_id = ?`,
+        [req.session.pnjId]
+      );
+      return res.json(rows);
+    } catch (err) {
+      return handleDbError(err, res);
+    }
+  }
+
   const userId = req.session.userId;
   try {
     const [rows] = await pool.execute(
@@ -129,6 +143,9 @@ app.get('/contacts', requireAuth, async (req, res) => {
 
 // Récupération des demandes de contact
 app.get('/contact-requests', requireAuth, async (req, res) => {
+  if (req.session.pnjId) {
+    return res.json([]);
+  }
   const userId = req.session.userId;
   try {
     const [rows] = await pool.execute(
@@ -144,6 +161,27 @@ app.get('/contact-requests', requireAuth, async (req, res) => {
 // Envoi d'une demande de contact
 app.post('/contacts', requireAuth, async (req, res) => {
   const { contactUsername } = req.body;
+
+  if (req.session.pnjId) {
+    try {
+      const [users] = await pool.execute(
+        'SELECT id FROM users WHERE username = ?',
+        [contactUsername]
+      );
+      if (!users.length) {
+        return res.status(404).json({ error: 'Utilisateur introuvable' });
+      }
+      const contactId = users[0].id;
+      await pool.execute(
+        'INSERT INTO pnj_contacts (pnj_id, user_id) VALUES (?, ?)',
+        [req.session.pnjId, contactId]
+      );
+      return res.status(201).json({ message: 'Contact ajouté' });
+    } catch (err) {
+      return handleDbError(err, res);
+    }
+  }
+
   const userId = req.session.userId;
   try {
     const [users] = await pool.execute(
@@ -166,6 +204,9 @@ app.post('/contacts', requireAuth, async (req, res) => {
 
 // Acceptation d'une demande de contact
 app.post('/contacts/accept', requireAuth, async (req, res) => {
+  if (req.session.pnjId) {
+    return res.status(400).json({ error: 'Action invalide' });
+  }
   const { requesterId } = req.body;
   const userId = req.session.userId;
   try {
@@ -186,6 +227,19 @@ app.post('/contacts/accept', requireAuth, async (req, res) => {
 // Suppression d'un contact
 app.delete('/contacts', requireAuth, async (req, res) => {
   const { contactId } = req.body;
+
+  if (req.session.pnjId) {
+    try {
+      await pool.execute(
+        'DELETE FROM pnj_contacts WHERE pnj_id = ? AND user_id = ?',
+        [req.session.pnjId, contactId]
+      );
+      return res.json({ message: 'Contact supprimé' });
+    } catch (err) {
+      return handleDbError(err, res);
+    }
+  }
+
   const userId = req.session.userId;
   try {
     await pool.execute(
@@ -391,6 +445,26 @@ app.post('/admin/pnjs', requireAdmin, async (req, res) => {
       [name, description]
     );
     res.status(201).json({ message: 'PNJ créé' });
+  } catch (err) {
+    handleDbError(err, res);
+  }
+});
+
+app.post('/admin/pnjs/:id/impersonate', requireAdmin, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [rows] = await pool.execute(
+      'SELECT id, name FROM pnjs WHERE id = ?',
+      [id]
+    );
+    if (!rows.length) {
+      return res.status(404).json({ error: 'PNJ introuvable' });
+    }
+    req.session.userId = null;
+    req.session.isAdmin = false;
+    req.session.pnjId = rows[0].id;
+    req.session.username = rows[0].name;
+    res.json({ message: 'Connexion en tant que PNJ réussie' });
   } catch (err) {
     handleDbError(err, res);
   }
