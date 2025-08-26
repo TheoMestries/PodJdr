@@ -17,9 +17,16 @@ async function loadStats() {
   const data = await res.json();
   const list = document.getElementById('stats-list');
   list.innerHTML = '';
-  data.forEach(({ username, rolls, diceRolled, average, max }) => {
+  data.forEach(({ username, dice }) => {
     const li = document.createElement('li');
-    li.innerHTML = `<strong>${username}</strong> - Lancés: ${rolls}, Dés lancés: ${diceRolled}, Moyenne: ${average}, Max: ${max}`;
+    li.innerHTML = `<strong>${username}</strong>`;
+    const subList = document.createElement('ul');
+    dice.forEach(({ sides, rolls, diceRolled, average, max }) => {
+      const subLi = document.createElement('li');
+      subLi.textContent = `d${sides} - Lancés: ${rolls}, Dés lancés: ${diceRolled}, Moyenne: ${average}, Max: ${max}`;
+      subList.appendChild(subLi);
+    });
+    li.appendChild(subList);
     list.appendChild(li);
   });
 }
