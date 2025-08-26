@@ -291,33 +291,37 @@ app.get('/stats', requireAuth, async (req, res) => {
     const stats = {};
     for (const row of rows) {
       if (!stats[row.user_id]) {
-        stats[row.user_id] = {
-          username: row.username,
+        stats[row.user_id] = { username: row.username, dice: {} };
+      }
+      if (!stats[row.user_id].dice[row.sides]) {
+        stats[row.user_id].dice[row.sides] = {
           rolls: 0,
           diceRolled: 0,
           totalSum: 0,
           maxRoll: 0,
         };
       }
-      const userStat = stats[row.user_id];
+      const diceStat = stats[row.user_id].dice[row.sides];
       const numbers = row.result.match(/-?\d+/g) || [];
-      let total = 0;
-      if (row.result.includes('=')) {
-        total = parseInt(numbers[numbers.length - 1], 10);
-      } else {
-        total = numbers.reduce((sum, n) => sum + parseInt(n, 10), 0);
-      }
-      userStat.rolls += 1;
-      userStat.diceRolled += row.dice_count;
-      userStat.totalSum += total;
-      if (total > userStat.maxRoll) userStat.maxRoll = total;
+      const diceNumbers = numbers.slice(0, row.dice_count);
+      const diceSum = diceNumbers.reduce((sum, n) => sum + parseInt(n, 10), 0);
+      const total = row.result.includes('=')
+        ? parseInt(numbers[numbers.length - 1], 10)
+        : diceSum;
+      diceStat.rolls += 1;
+      diceStat.diceRolled += row.dice_count;
+      diceStat.totalSum += diceSum;
+      if (total > diceStat.maxRoll) diceStat.maxRoll = total;
     }
-    const result = Object.values(stats).map((s) => ({
-      username: s.username,
-      rolls: s.rolls,
-      diceRolled: s.diceRolled,
-      average: s.rolls ? +(s.totalSum / s.rolls).toFixed(2) : 0,
-      max: s.maxRoll,
+    const result = Object.values(stats).map((u) => ({
+      username: u.username,
+      dice: Object.entries(u.dice).map(([sides, d]) => ({
+        sides: parseInt(sides, 10),
+        rolls: d.rolls,
+        diceRolled: d.diceRolled,
+        average: d.diceRolled ? +(d.totalSum / d.diceRolled).toFixed(2) : 0,
+        max: d.maxRoll,
+      })),
     }));
     res.json(result);
   } catch (err) {
