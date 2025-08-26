@@ -303,15 +303,15 @@ app.get('/stats', requireAuth, async (req, res) => {
       }
       const diceStat = stats[row.user_id].dice[row.sides];
       const numbers = row.result.match(/-?\d+/g) || [];
-      let total = 0;
-      if (row.result.includes('=')) {
-        total = parseInt(numbers[numbers.length - 1], 10);
-      } else {
-        total = numbers.reduce((sum, n) => sum + parseInt(n, 10), 0);
-      }
+      const diceNumbers = numbers.slice(0, row.dice_count);
+      const diceSum = diceNumbers.reduce((sum, n) => sum + parseInt(n, 10), 0);
+      const total = row.result.includes('=')
+        ? parseInt(numbers[numbers.length - 1], 10)
+        : diceSum;
       diceStat.rolls += 1;
       diceStat.diceRolled += row.dice_count;
-      diceStat.totalSum += total;
+      diceStat.totalSum += diceSum;
+
       if (total > diceStat.maxRoll) diceStat.maxRoll = total;
     }
     const result = Object.values(stats).map((u) => ({
@@ -320,7 +320,8 @@ app.get('/stats', requireAuth, async (req, res) => {
         sides: parseInt(sides, 10),
         rolls: d.rolls,
         diceRolled: d.diceRolled,
-        average: d.rolls ? +(d.totalSum / d.rolls).toFixed(2) : 0,
+        average: d.diceRolled ? +(d.totalSum / d.diceRolled).toFixed(2) : 0,
+
         max: d.maxRoll,
       })),
     }));

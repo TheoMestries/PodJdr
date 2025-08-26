@@ -23,7 +23,8 @@ async function loadStats() {
     const subList = document.createElement('ul');
     dice.forEach(({ sides, rolls, diceRolled, average, max }) => {
       const subLi = document.createElement('li');
-      subLi.textContent = `d${sides} - Lancés: ${rolls}, Dés lancés: ${diceRolled}, Moyenne: ${average}, Max: ${max}`;
+      subLi.textContent = `d${sides} - Lancés: ${rolls}, Dés lancés: ${diceRolled}, Moyenne par dé: ${average}, Max: ${max}`;
+
       subList.appendChild(subLi);
     });
     li.appendChild(subList);
