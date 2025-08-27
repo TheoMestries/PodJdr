@@ -229,7 +229,7 @@ body.auth {
   background: rgba(0, 255, 231, 0.1);
 }
 
-.contact-list li span {
+.contact-list li > span {
   flex: 1;
   cursor: pointer;
 }
