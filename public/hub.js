@@ -125,6 +125,8 @@ async function openChat(id, username, contactIsPnj) {
   currentContactIsPnj = contactIsPnj;
   document.getElementById('chat-with').textContent = username;
   document.getElementById('chat-section').classList.remove('hidden');
+  const placeholder = document.getElementById('placeholder');
+  if (placeholder) placeholder.classList.add('hidden');
   await loadMessages();
   if (chatInterval) clearInterval(chatInterval);
   chatInterval = setInterval(loadMessages, 3000);
@@ -167,4 +169,4 @@ async function loadMessages() {
     loadMessages();
   });
 
-init();
+  init();

@@ -12,38 +12,50 @@
     <button id="dice-btn" class="btn">Dés</button>
     <button id="logout-btn" class="btn">Déconnexion</button>
   </header>
-  <div class="hub-container">
-    <aside class="sidebar">
-      <h2>Contacts</h2>
-      <ul id="contact-list"></ul>
+    <div class="hub-container">
+      <aside class="sidebar">
+        <section class="sidebar-section panel">
+          <h2>Contacts</h2>
+          <ul id="contact-list" class="contact-list"></ul>
+        </section>
 
-      <h2>Demandes</h2>
-      <ul id="request-list"></ul>
+        <section class="sidebar-section panel">
+          <h2>Demandes</h2>
+          <ul id="request-list"></ul>
+        </section>
 
-      <h2>En attente</h2>
-      <ul id="pending-list"></ul>
+        <section class="sidebar-section panel">
+          <h2>En attente</h2>
+          <ul id="pending-list"></ul>
+        </section>
 
-      <form id="add-contact-form">
-        <input type="text" id="contact-username" placeholder="Nom d'utilisateur" required />
-        <button type="submit" class="btn">Ajouter</button>
-      </form>
-    </aside>
+        <section class="sidebar-section panel">
+          <form id="add-contact-form">
+            <input type="text" id="contact-username" placeholder="Nom d'utilisateur" required />
+            <button type="submit" class="btn">Ajouter</button>
+          </form>
+        </section>
+      </aside>
 
-    <main class="chat-area">
-      <header class="user-bar">
-        <h1 id="user-name"></h1>
-      </header>
+      <main class="chat-area">
+        <header class="user-bar">
+          <h1 id="user-name"></h1>
+        </header>
 
-      <section id="chat-section" class="chat hidden">
-        <h2 id="chat-with"></h2>
-        <ul id="message-list"></ul>
-        <form id="message-form">
-          <input type="text" id="message-input" placeholder="Message..." autocomplete="off" required />
-          <button type="submit" class="btn">Envoyer</button>
-        </form>
-      </section>
-    </main>
-  </div>
+        <section id="placeholder" class="chat-placeholder panel">
+          <p>Sélectionnez un contact pour démarrer une conversation.</p>
+        </section>
+
+        <section id="chat-section" class="chat panel hidden">
+          <h2 id="chat-with"></h2>
+          <ul id="message-list"></ul>
+          <form id="message-form">
+            <input type="text" id="message-input" placeholder="Message..." autocomplete="off" required />
+            <button type="submit" class="btn">Envoyer</button>
+          </form>
+        </section>
+      </main>
+    </div>
   <script src="hub.js"></script>
 </body>
 </html>
