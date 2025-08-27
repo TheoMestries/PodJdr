@@ -139,13 +139,19 @@ async function loadMessages() {
   const messages = await res.json();
   const list = document.getElementById('message-list');
   list.innerHTML = '';
-  messages.forEach(({ sender_user_id, sender_pnj_id, content, is_read, receiver_user_id, receiver_pnj_id }) => {
+  messages.forEach(({ sender_user_id, sender_pnj_id, content, is_read }) => {
     const li = document.createElement('li');
-    li.textContent = content;
     li.classList.add('message');
+    const text = document.createElement('div');
+    text.textContent = content;
+    li.appendChild(text);
     const senderId = sender_user_id || sender_pnj_id;
     if (senderId == userId) {
       li.classList.add('sent');
+      const status = document.createElement('span');
+      status.classList.add('status');
+      status.textContent = is_read ? 'Lu' : 'Non lu';
+      li.appendChild(status);
     } else {
       li.classList.add('received');
       if (!is_read) li.classList.add('unread');
