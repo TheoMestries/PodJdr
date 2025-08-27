@@ -229,9 +229,25 @@ body.auth {
   background: rgba(0, 255, 231, 0.1);
 }
 
-.contact-list li span {
+.contact-list li > span {
   flex: 1;
   cursor: pointer;
+}
+
+.contact-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.contact-name .badge {
+  background: var(--secondary);
+  color: var(--dark-bg);
+  border-radius: 10px;
+  padding: 2px 6px;
+  font-size: 0.75rem;
+  box-shadow: 0 0 5px var(--secondary);
+  pointer-events: none;
 }
 
 .sidebar form {
