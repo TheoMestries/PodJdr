@@ -37,10 +37,10 @@ async function loadContacts() {
   const contacts = await res.json();
   const list = document.getElementById('contact-list');
   list.innerHTML = '';
-  contacts.forEach(({ id, username, is_pnj }) => {
+  contacts.forEach(({ id, username, is_pnj, unread_count }) => {
     const li = document.createElement('li');
     const span = document.createElement('span');
-    span.textContent = username;
+    span.textContent = unread_count ? `${username} (${unread_count})` : username;
     span.addEventListener('click', () => openChat(id, username, !!is_pnj));
     li.appendChild(span);
     const btn = document.createElement('button');
@@ -139,7 +139,7 @@ async function loadMessages() {
   const messages = await res.json();
   const list = document.getElementById('message-list');
   list.innerHTML = '';
-  messages.forEach(({ sender_user_id, sender_pnj_id, content }) => {
+  messages.forEach(({ sender_user_id, sender_pnj_id, content, is_read, receiver_user_id, receiver_pnj_id }) => {
     const li = document.createElement('li');
     li.textContent = content;
     li.classList.add('message');
@@ -148,10 +148,12 @@ async function loadMessages() {
       li.classList.add('sent');
     } else {
       li.classList.add('received');
+      if (!is_read) li.classList.add('unread');
     }
     list.appendChild(li);
   });
   list.scrollTop = list.scrollHeight;
+  loadContacts();
 }
 
   document.getElementById('message-form').addEventListener('submit', async (e) => {
