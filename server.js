@@ -17,6 +17,11 @@ app.use(
 
 const diceLog = [];
 
+// Statuts pour les relations utilisateur/PNJ dans la table pnj_contacts :
+// 0 - en attente de validation par le joueur
+// 1 - contact accepté
+// 2 - en attente de validation par le PNJ
+
 function requireAuth(req, res, next) {
   if (!req.session.userId && !req.session.pnjId) {
     return res.status(401).json({ error: 'Non authentifié' });
@@ -148,7 +153,7 @@ app.get('/contact-requests', requireAuth, async (req, res) => {
   try {
     if (req.session.pnjId) {
       const [rows] = await pool.execute(
-        `SELECT u.username, c.user_id AS requesterId, 0 AS is_pnj FROM pnj_contacts c JOIN users u ON c.user_id = u.id WHERE c.pnj_id = ? AND c.status = 0`,
+        `SELECT u.username, c.user_id AS requesterId, 0 AS is_pnj FROM pnj_contacts c JOIN users u ON c.user_id = u.id WHERE c.pnj_id = ? AND c.status = 2`,
         [req.session.pnjId]
       );
       return res.json(rows);
@@ -214,7 +219,7 @@ app.post('/contacts', requireAuth, async (req, res) => {
     if (pnjs.length) {
       const pnjId = pnjs[0].id;
       await pool.execute(
-        'INSERT INTO pnj_contacts (pnj_id, user_id, status) VALUES (?, ?, 0)',
+        'INSERT INTO pnj_contacts (pnj_id, user_id, status) VALUES (?, ?, 2)',
         [pnjId, userId]
       );
       return res.status(201).json({ message: 'Demande envoyée' });
@@ -232,7 +237,7 @@ app.post('/contacts/accept', requireAuth, async (req, res) => {
   try {
     if (req.session.pnjId) {
       await pool.execute(
-        'UPDATE pnj_contacts SET status = 1 WHERE pnj_id = ? AND user_id = ?',
+        'UPDATE pnj_contacts SET status = 1 WHERE pnj_id = ? AND user_id = ? AND status = 2',
         [req.session.pnjId, requesterId]
       );
       return res.json({ message: 'Contact accepté' });
@@ -241,14 +246,14 @@ app.post('/contacts/accept', requireAuth, async (req, res) => {
     const userId = req.session.userId;
     if (isPnj) {
       await pool.execute(
-        'UPDATE pnj_contacts SET status = 1 WHERE pnj_id = ? AND user_id = ?',
+        'UPDATE pnj_contacts SET status = 1 WHERE pnj_id = ? AND user_id = ? AND status = 0',
         [requesterId, userId]
       );
       return res.json({ message: 'Contact accepté' });
     }
 
     await pool.execute(
-      'UPDATE contacts SET status = 1 WHERE user_id = ? AND contact_id = ?',
+      'UPDATE contacts SET status = 1 WHERE user_id = ? AND contact_id = ? AND status = 0',
       [requesterId, userId]
     );
     await pool.execute(
