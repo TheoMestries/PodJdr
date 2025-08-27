@@ -27,12 +27,7 @@ async function init() {
   isPnj = data.isPnj;
   document.getElementById('user-name').textContent = username;
   loadContacts();
-  if (!isPnj) {
-    loadRequests();
-  } else {
-    document.getElementById('request-list').previousElementSibling.classList.add('hidden');
-    document.getElementById('request-list').classList.add('hidden');
-  }
+  loadRequests();
 }
 
 async function loadContacts() {
@@ -54,7 +49,7 @@ async function loadContacts() {
       await fetch('/contacts', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contactId: id }),
+        body: JSON.stringify({ contactId: id, isPnj: !!is_pnj }),
       });
       loadContacts();
     });
@@ -69,7 +64,7 @@ async function loadRequests() {
   const requests = await res.json();
   const list = document.getElementById('request-list');
   list.innerHTML = '';
-  requests.forEach(({ username, requesterId }) => {
+  requests.forEach(({ username, requesterId, is_pnj }) => {
     const li = document.createElement('li');
     li.textContent = username + ' ';
     const btn = document.createElement('button');
@@ -79,10 +74,10 @@ async function loadRequests() {
       await fetch('/contacts/accept', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requesterId }),
+        body: JSON.stringify({ requesterId, isPnj: !!is_pnj }),
       });
       loadContacts();
-      if (!isPnj) loadRequests();
+      loadRequests();
     });
     li.appendChild(btn);
     list.appendChild(li);
@@ -103,9 +98,7 @@ document
     if (res.ok) {
       document.getElementById('contact-username').value = '';
       loadContacts();
-      if (!isPnj) {
-        loadRequests();
-      }
+      loadRequests();
     } else {
       alert(data.error);
     }

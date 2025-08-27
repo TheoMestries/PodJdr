@@ -120,7 +120,7 @@ app.get('/contacts', requireAuth, async (req, res) => {
   if (req.session.pnjId) {
     try {
       const [rows] = await pool.execute(
-        `SELECT u.id, u.username, 0 AS is_pnj FROM pnj_contacts c JOIN users u ON c.user_id = u.id WHERE c.pnj_id = ?`,
+        `SELECT u.id, u.username, 0 AS is_pnj FROM pnj_contacts c JOIN users u ON c.user_id = u.id WHERE c.pnj_id = ? AND c.status = 1`,
         [req.session.pnjId]
       );
       return res.json(rows);
@@ -134,7 +134,7 @@ app.get('/contacts', requireAuth, async (req, res) => {
     const [rows] = await pool.execute(
       `SELECT u.id, u.username, 0 AS is_pnj FROM contacts c JOIN users u ON c.contact_id = u.id WHERE c.user_id = ? AND c.status = 1
        UNION
-       SELECT p.id, p.name AS username, 1 AS is_pnj FROM pnj_contacts c JOIN pnjs p ON c.pnj_id = p.id WHERE c.user_id = ?`,
+       SELECT p.id, p.name AS username, 1 AS is_pnj FROM pnj_contacts c JOIN pnjs p ON c.pnj_id = p.id WHERE c.user_id = ? AND c.status = 1`,
       [userId, userId]
     );
     res.json(rows);
@@ -145,14 +145,21 @@ app.get('/contacts', requireAuth, async (req, res) => {
 
 // Récupération des demandes de contact
 app.get('/contact-requests', requireAuth, async (req, res) => {
-  if (req.session.pnjId) {
-    return res.json([]);
-  }
-  const userId = req.session.userId;
   try {
+    if (req.session.pnjId) {
+      const [rows] = await pool.execute(
+        `SELECT u.username, c.user_id AS requesterId, 0 AS is_pnj FROM pnj_contacts c JOIN users u ON c.user_id = u.id WHERE c.pnj_id = ? AND c.status = 0`,
+        [req.session.pnjId]
+      );
+      return res.json(rows);
+    }
+
+    const userId = req.session.userId;
     const [rows] = await pool.execute(
-      `SELECT u.username, c.user_id AS requesterId FROM contacts c JOIN users u ON c.user_id = u.id WHERE c.contact_id = ? AND c.status = 0`,
-      [userId]
+      `SELECT u.username, c.user_id AS requesterId, 0 AS is_pnj FROM contacts c JOIN users u ON c.user_id = u.id WHERE c.contact_id = ? AND c.status = 0
+       UNION
+       SELECT p.name AS username, c.pnj_id AS requesterId, 1 AS is_pnj FROM pnj_contacts c JOIN pnjs p ON c.pnj_id = p.id WHERE c.user_id = ? AND c.status = 0`,
+      [userId, userId]
     );
     res.json(rows);
   } catch (err) {
@@ -175,10 +182,10 @@ app.post('/contacts', requireAuth, async (req, res) => {
       }
       const contactId = users[0].id;
       await pool.execute(
-        'INSERT INTO pnj_contacts (pnj_id, user_id) VALUES (?, ?)',
+        'INSERT INTO pnj_contacts (pnj_id, user_id, status) VALUES (?, ?, 0)',
         [req.session.pnjId, contactId]
       );
-      return res.status(201).json({ message: 'Contact ajouté' });
+      return res.status(201).json({ message: 'Demande envoyée' });
     } catch (err) {
       return handleDbError(err, res);
     }
@@ -207,10 +214,10 @@ app.post('/contacts', requireAuth, async (req, res) => {
     if (pnjs.length) {
       const pnjId = pnjs[0].id;
       await pool.execute(
-        'INSERT INTO pnj_contacts (pnj_id, user_id) VALUES (?, ?)',
+        'INSERT INTO pnj_contacts (pnj_id, user_id, status) VALUES (?, ?, 0)',
         [pnjId, userId]
       );
-      return res.status(201).json({ message: 'Contact ajouté' });
+      return res.status(201).json({ message: 'Demande envoyée' });
     }
 
     res.status(404).json({ error: 'Utilisateur introuvable' });
@@ -221,12 +228,25 @@ app.post('/contacts', requireAuth, async (req, res) => {
 
 // Acceptation d'une demande de contact
 app.post('/contacts/accept', requireAuth, async (req, res) => {
-  if (req.session.pnjId) {
-    return res.status(400).json({ error: 'Action invalide' });
-  }
-  const { requesterId } = req.body;
-  const userId = req.session.userId;
+  const { requesterId, isPnj } = req.body;
   try {
+    if (req.session.pnjId) {
+      await pool.execute(
+        'UPDATE pnj_contacts SET status = 1 WHERE pnj_id = ? AND user_id = ?',
+        [req.session.pnjId, requesterId]
+      );
+      return res.json({ message: 'Contact accepté' });
+    }
+
+    const userId = req.session.userId;
+    if (isPnj) {
+      await pool.execute(
+        'UPDATE pnj_contacts SET status = 1 WHERE pnj_id = ? AND user_id = ?',
+        [requesterId, userId]
+      );
+      return res.json({ message: 'Contact accepté' });
+    }
+
     await pool.execute(
       'UPDATE contacts SET status = 1 WHERE user_id = ? AND contact_id = ?',
       [requesterId, userId]
@@ -243,7 +263,7 @@ app.post('/contacts/accept', requireAuth, async (req, res) => {
 
 // Suppression d'un contact
 app.delete('/contacts', requireAuth, async (req, res) => {
-  const { contactId } = req.body;
+  const { contactId, isPnj } = req.body;
 
   if (req.session.pnjId) {
     try {
@@ -259,10 +279,17 @@ app.delete('/contacts', requireAuth, async (req, res) => {
 
   const userId = req.session.userId;
   try {
-    await pool.execute(
-      'DELETE FROM contacts WHERE (user_id = ? AND contact_id = ?) OR (user_id = ? AND contact_id = ?)',
-      [userId, contactId, contactId, userId]
-    );
+    if (isPnj) {
+      await pool.execute(
+        'DELETE FROM pnj_contacts WHERE pnj_id = ? AND user_id = ?',
+        [contactId, userId]
+      );
+    } else {
+      await pool.execute(
+        'DELETE FROM contacts WHERE (user_id = ? AND contact_id = ?) OR (user_id = ? AND contact_id = ?)',
+        [userId, contactId, contactId, userId]
+      );
+    }
     res.json({ message: 'Contact supprimé' });
   } catch (err) {
     handleDbError(err, res);
