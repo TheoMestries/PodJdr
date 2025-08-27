@@ -48,13 +48,14 @@ lister, modifier et supprimer ces comptes PNJ. Un administrateur peut également
 "prendre le contrôle" d'un PNJ via `/admin/pnjs/:id/impersonate` afin d'accéder
 à l'interface joueur en son nom.
 
-Les contacts des PNJ sont stockés dans une table séparée :
+Les contacts des PNJ sont stockés dans une table séparée. Comme pour les contacts entre joueurs, une demande doit être acceptée avant d'être active :
 
 ```sql
 CREATE TABLE pnj_contacts (
   id INT AUTO_INCREMENT PRIMARY KEY,
   pnj_id INT NOT NULL,
   user_id INT NOT NULL,
+  status TINYINT DEFAULT 0,
   FOREIGN KEY (pnj_id) REFERENCES pnjs(id),
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
