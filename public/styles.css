@@ -298,6 +298,10 @@ body.auth {
   color: var(--secondary);
 }
 
+.chat-placeholder.hidden {
+  display: none;
+}
+
 #message-list {
   flex: 1;
   list-style: none;
