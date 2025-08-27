@@ -28,6 +28,7 @@ async function init() {
   document.getElementById('user-name').textContent = username;
   loadContacts();
   loadRequests();
+  loadPending();
 }
 
 async function loadContacts() {
@@ -64,22 +65,36 @@ async function loadRequests() {
   const requests = await res.json();
   const list = document.getElementById('request-list');
   list.innerHTML = '';
-  requests.forEach(({ username, requesterId, is_pnj }) => {
-    const li = document.createElement('li');
-    li.textContent = username + ' ';
-    const btn = document.createElement('button');
-    btn.textContent = 'Accepter';
-    btn.classList.add('btn');
-    btn.addEventListener('click', async () => {
-      await fetch('/contacts/accept', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requesterId, isPnj: !!is_pnj }),
+    requests.forEach(({ username, requesterId, is_pnj }) => {
+      const li = document.createElement('li');
+      li.textContent = username + ' ';
+      const btn = document.createElement('button');
+      btn.textContent = 'Accepter';
+      btn.classList.add('btn');
+      btn.addEventListener('click', async () => {
+        await fetch('/contacts/accept', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ requesterId, isPnj: !!is_pnj }),
+        });
+        loadContacts();
+        loadRequests();
+        loadPending();
       });
-      loadContacts();
-      loadRequests();
+      li.appendChild(btn);
+      list.appendChild(li);
     });
-    li.appendChild(btn);
+  }
+
+async function loadPending() {
+  const res = await fetch('/pending-requests');
+  if (!res.ok) return;
+  const pending = await res.json();
+  const list = document.getElementById('pending-list');
+  list.innerHTML = '';
+  pending.forEach(({ username }) => {
+    const li = document.createElement('li');
+    li.textContent = username;
     list.appendChild(li);
   });
 }
@@ -88,21 +103,22 @@ document
   .getElementById('add-contact-form')
   .addEventListener('submit', async (e) => {
     e.preventDefault();
-    const contactUsername = document.getElementById('contact-username').value;
-    const res = await fetch('/contacts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contactUsername }),
+      const contactUsername = document.getElementById('contact-username').value;
+      const res = await fetch('/contacts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contactUsername }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        document.getElementById('contact-username').value = '';
+        loadContacts();
+        loadRequests();
+        loadPending();
+      } else {
+        alert(data.error);
+      }
     });
-    const data = await res.json();
-    if (res.ok) {
-      document.getElementById('contact-username').value = '';
-      loadContacts();
-      loadRequests();
-    } else {
-      alert(data.error);
-    }
-  });
 
 async function openChat(id, username, contactIsPnj) {
   currentContactId = id;
