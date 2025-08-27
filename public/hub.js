@@ -39,10 +39,21 @@ async function loadContacts() {
   list.innerHTML = '';
   contacts.forEach(({ id, username, is_pnj, unread_count }) => {
     const li = document.createElement('li');
-    const span = document.createElement('span');
-    span.textContent = unread_count ? `${username} (${unread_count})` : username;
-    span.addEventListener('click', () => openChat(id, username, !!is_pnj));
-    li.appendChild(span);
+
+    const nameSpan = document.createElement('span');
+    nameSpan.classList.add('contact-name');
+    nameSpan.textContent = username;
+    nameSpan.addEventListener('click', () => openChat(id, username, !!is_pnj));
+
+    if (unread_count) {
+      const badge = document.createElement('span');
+      badge.classList.add('badge');
+      badge.textContent = unread_count;
+      nameSpan.appendChild(badge);
+    }
+
+    li.appendChild(nameSpan);
+
     const btn = document.createElement('button');
     btn.textContent = '🗑️';
     btn.classList.add('btn', 'delete-btn');
