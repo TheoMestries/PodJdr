@@ -125,8 +125,10 @@ app.get('/contacts', requireAuth, async (req, res) => {
   if (req.session.pnjId) {
     try {
       const [rows] = await pool.execute(
-        `SELECT u.id, u.username, 0 AS is_pnj FROM pnj_contacts c JOIN users u ON c.user_id = u.id WHERE c.pnj_id = ? AND c.status = 1`,
-        [req.session.pnjId]
+        `SELECT u.id, u.username, 0 AS is_pnj,
+          (SELECT COUNT(*) FROM messages m WHERE m.sender_user_id = u.id AND m.receiver_pnj_id = ? AND m.is_read = 0) AS unread_count
+         FROM pnj_contacts c JOIN users u ON c.user_id = u.id WHERE c.pnj_id = ? AND c.status = 1`,
+        [req.session.pnjId, req.session.pnjId]
       );
       return res.json(rows);
     } catch (err) {
@@ -137,10 +139,14 @@ app.get('/contacts', requireAuth, async (req, res) => {
   const userId = req.session.userId;
   try {
     const [rows] = await pool.execute(
-      `SELECT u.id, u.username, 0 AS is_pnj FROM contacts c JOIN users u ON c.contact_id = u.id WHERE c.user_id = ? AND c.status = 1
+      `SELECT u.id, u.username, 0 AS is_pnj,
+          (SELECT COUNT(*) FROM messages m WHERE m.sender_user_id = u.id AND m.receiver_user_id = ? AND m.is_read = 0) AS unread_count
+       FROM contacts c JOIN users u ON c.contact_id = u.id WHERE c.user_id = ? AND c.status = 1
        UNION
-       SELECT p.id, p.name AS username, 1 AS is_pnj FROM pnj_contacts c JOIN pnjs p ON c.pnj_id = p.id WHERE c.user_id = ? AND c.status = 1`,
-      [userId, userId]
+       SELECT p.id, p.name AS username, 1 AS is_pnj,
+          (SELECT COUNT(*) FROM messages m WHERE m.sender_pnj_id = p.id AND m.receiver_user_id = ? AND m.is_read = 0) AS unread_count
+       FROM pnj_contacts c JOIN pnjs p ON c.pnj_id = p.id WHERE c.user_id = ? AND c.status = 1`,
+      [userId, userId, userId, userId]
     );
     res.json(rows);
   } catch (err) {
@@ -337,25 +343,58 @@ app.get('/messages', requireAuth, async (req, res) => {
     if (req.session.pnjId) {
       const pnjId = req.session.pnjId;
       const [rows] = await pool.execute(
-        `SELECT sender_user_id, sender_pnj_id, receiver_user_id, receiver_pnj_id, content, created_at FROM messages WHERE (sender_pnj_id = ? AND receiver_user_id = ?) OR (sender_user_id = ? AND receiver_pnj_id = ?) ORDER BY created_at ASC`,
+        `SELECT id, sender_user_id, sender_pnj_id, receiver_user_id, receiver_pnj_id, content, created_at, is_read FROM messages WHERE (sender_pnj_id = ? AND receiver_user_id = ?) OR (sender_user_id = ? AND receiver_pnj_id = ?) ORDER BY created_at ASC`,
         [pnjId, contactId, contactId, pnjId]
       );
+      const unreadIds = rows
+        .filter((r) => r.receiver_pnj_id === pnjId && !r.is_read)
+        .map((r) => r.id);
+      if (unreadIds.length) {
+        await pool.execute(
+          `UPDATE messages SET is_read = 1 WHERE id IN (${unreadIds
+            .map(() => '?')
+            .join(',')})`,
+          unreadIds
+        );
+      }
       return res.json(rows);
     }
 
     const userId = req.session.userId;
     if (isPnj === '1') {
       const [rows] = await pool.execute(
-        `SELECT sender_user_id, sender_pnj_id, receiver_user_id, receiver_pnj_id, content, created_at FROM messages WHERE (sender_user_id = ? AND receiver_pnj_id = ?) OR (sender_pnj_id = ? AND receiver_user_id = ?) ORDER BY created_at ASC`,
+        `SELECT id, sender_user_id, sender_pnj_id, receiver_user_id, receiver_pnj_id, content, created_at, is_read FROM messages WHERE (sender_user_id = ? AND receiver_pnj_id = ?) OR (sender_pnj_id = ? AND receiver_user_id = ?) ORDER BY created_at ASC`,
         [userId, contactId, contactId, userId]
       );
+      const unreadIds = rows
+        .filter((r) => r.receiver_user_id === userId && !r.is_read)
+        .map((r) => r.id);
+      if (unreadIds.length) {
+        await pool.execute(
+          `UPDATE messages SET is_read = 1 WHERE id IN (${unreadIds
+            .map(() => '?')
+            .join(',')})`,
+          unreadIds
+        );
+      }
       return res.json(rows);
     }
 
     const [rows] = await pool.execute(
-      `SELECT sender_user_id, sender_pnj_id, receiver_user_id, receiver_pnj_id, content, created_at FROM messages WHERE (sender_user_id = ? AND receiver_user_id = ?) OR (sender_user_id = ? AND receiver_user_id = ?) ORDER BY created_at ASC`,
+      `SELECT id, sender_user_id, sender_pnj_id, receiver_user_id, receiver_pnj_id, content, created_at, is_read FROM messages WHERE (sender_user_id = ? AND receiver_user_id = ?) OR (sender_user_id = ? AND receiver_user_id = ?) ORDER BY created_at ASC`,
       [userId, contactId, contactId, userId]
     );
+    const unreadIds = rows
+      .filter((r) => r.receiver_user_id === userId && !r.is_read)
+      .map((r) => r.id);
+    if (unreadIds.length) {
+      await pool.execute(
+        `UPDATE messages SET is_read = 1 WHERE id IN (${unreadIds
+          .map(() => '?')
+          .join(',')})`,
+        unreadIds
+      );
+    }
     res.json(rows);
   } catch (err) {
     handleDbError(err, res);
@@ -373,7 +412,7 @@ app.post('/messages', requireAuth, async (req, res) => {
 
   try {
     await pool.execute(
-      'INSERT INTO messages (sender_user_id, sender_pnj_id, receiver_user_id, receiver_pnj_id, content) VALUES (?, ?, ?, ?, ?)',
+      'INSERT INTO messages (sender_user_id, sender_pnj_id, receiver_user_id, receiver_pnj_id, content, is_read) VALUES (?, ?, ?, ?, ?, 0)',
       [senderUserId, senderPnjId, receiverUserId, receiverPnjId, content]
     );
     res.status(201).json({ message: 'Message envoyé' });

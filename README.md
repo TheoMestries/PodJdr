@@ -75,6 +75,7 @@ CREATE TABLE messages (
   receiver_user_id INT,
   receiver_pnj_id INT,
   content TEXT NOT NULL,
+  is_read TINYINT DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (sender_user_id) REFERENCES users(id),
   FOREIGN KEY (sender_pnj_id) REFERENCES pnjs(id),
@@ -82,3 +83,6 @@ CREATE TABLE messages (
   FOREIGN KEY (receiver_pnj_id) REFERENCES pnjs(id)
 );
 ```
+
+La colonne `is_read` indique si le message a été consulté par son destinataire
+(`0` = non lu, `1` = lu).

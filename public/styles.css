@@ -331,6 +331,10 @@ body.auth {
   color: #000;
 }
 
+#message-list li.unread {
+  box-shadow: 0 0 10px var(--secondary);
+}
+
 #message-form {
   display: flex;
   gap: 10px;
