@@ -172,6 +172,34 @@ app.get('/contact-requests', requireAuth, async (req, res) => {
   }
 });
 
+// Récupération des demandes en attente envoyées
+app.get('/pending-requests', requireAuth, async (req, res) => {
+  if (req.session.pnjId) {
+    try {
+      const [rows] = await pool.execute(
+        `SELECT u.username, c.user_id AS targetId, 0 AS is_pnj FROM pnj_contacts c JOIN users u ON c.user_id = u.id WHERE c.pnj_id = ? AND c.status = 0`,
+        [req.session.pnjId]
+      );
+      return res.json(rows);
+    } catch (err) {
+      return handleDbError(err, res);
+    }
+  }
+
+  const userId = req.session.userId;
+  try {
+    const [rows] = await pool.execute(
+      `SELECT u.username, c.contact_id AS targetId, 0 AS is_pnj FROM contacts c JOIN users u ON c.contact_id = u.id WHERE c.user_id = ? AND c.status = 0
+       UNION
+       SELECT p.name AS username, c.pnj_id AS targetId, 1 AS is_pnj FROM pnj_contacts c JOIN pnjs p ON c.pnj_id = p.id WHERE c.user_id = ? AND c.status = 2`,
+      [userId, userId]
+    );
+    res.json(rows);
+  } catch (err) {
+    handleDbError(err, res);
+  }
+});
+
 // Envoi d'une demande de contact
 app.post('/contacts', requireAuth, async (req, res) => {
   const { contactUsername } = req.body;
