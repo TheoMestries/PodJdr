@@ -15,6 +15,14 @@ document.getElementById('dice-btn').addEventListener('click', () => {
   window.location.href = 'dice.html';
 });
 
+const exitBtn = document.getElementById('exit-pnj-btn');
+if (exitBtn) {
+  exitBtn.addEventListener('click', async () => {
+    await fetch('/admin/stop-impersonating', { method: 'POST' });
+    window.location.href = '/admin.html';
+  });
+}
+
 async function init() {
   const res = await fetch('/me');
   if (!res.ok) {
@@ -25,6 +33,9 @@ async function init() {
   username = data.username;
   userId = data.userId || data.pnjId;
   isPnj = data.isPnj;
+  if (data.isImpersonating && exitBtn) {
+    exitBtn.classList.remove('hidden');
+  }
   document.getElementById('user-name').textContent = username;
   loadContacts();
   loadRequests();
