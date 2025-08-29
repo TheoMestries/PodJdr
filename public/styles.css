@@ -6,6 +6,7 @@
   --dark-bg: #050510;
   --panel-bg: rgba(5, 5, 16, 0.8);
   --font-family: 'Orbitron', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  --eye-color: #9400d3;
 }
 
 .loading-overlay.hidden {
@@ -100,6 +101,38 @@ body.auth {
   letter-spacing: 4px;
   text-shadow: 0 0 10px var(--secondary), 0 0 20px var(--primary);
   margin: 0;
+}
+
+.logo-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.auth .logo-wrapper {
+  justify-content: center;
+}
+
+.logo-eye {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--eye-color);
+  border-radius: 50%;
+  background: #fff;
+  position: relative;
+  overflow: hidden;
+}
+
+.logo-eye .pupil {
+  width: 8px;
+  height: 8px;
+  background: var(--eye-color);
+  border-radius: 50%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  transition: transform 0.05s linear;
 }
 
 /* LOGIN & REGISTER */
