@@ -569,7 +569,10 @@ app.get('/stats', requireAuth, async (req, res) => {
 app.get('/admin/pnjs', requireAdmin, async (req, res) => {
   try {
     const [rows] = await pool.execute(
-      'SELECT id, name, description FROM pnjs'
+      `SELECT p.id, p.name, p.description,
+          (SELECT COUNT(*) FROM pnj_contacts c WHERE c.pnj_id = p.id AND c.status = 2) AS pending_requests,
+          (SELECT COUNT(*) FROM messages m WHERE m.receiver_pnj_id = p.id AND m.is_read = 0) AS unread_messages
+       FROM pnjs p`
     );
     res.json(rows);
   } catch (err) {

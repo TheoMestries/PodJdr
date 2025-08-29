@@ -23,10 +23,10 @@ async function loadPnjs() {
   const pnjs = await res.json();
   const list = document.getElementById('pnj-list');
   list.innerHTML = '';
-  pnjs.forEach(({ id, name, description }) => {
+  pnjs.forEach(({ id, name, description, pending_requests, unread_messages }) => {
     const li = document.createElement('li');
     const span = document.createElement('span');
-    span.textContent = `${name} - ${description || ''}`;
+    span.textContent = `${name} - ${description || ''} (${pending_requests} demandes, ${unread_messages} messages non lus)`;
     span.classList.add('pnj-link');
     span.addEventListener('click', async () => {
       await fetch(`/admin/pnjs/${id}/impersonate`, { method: 'POST' });
