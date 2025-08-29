@@ -106,6 +106,7 @@ app.get('/me', (req, res) => {
     username: req.session.username,
     isAdmin: !!req.session.isAdmin,
     isPnj: !!req.session.pnjId,
+    isImpersonating: !!req.session.isImpersonating,
   });
 });
 
@@ -599,14 +600,31 @@ app.post('/admin/pnjs/:id/impersonate', requireAdmin, async (req, res) => {
     if (!rows.length) {
       return res.status(404).json({ error: 'PNJ introuvable' });
     }
+    req.session.adminId = req.session.userId;
+    req.session.adminUsername = req.session.username;
     req.session.userId = null;
     req.session.isAdmin = false;
     req.session.pnjId = rows[0].id;
     req.session.username = rows[0].name;
+    req.session.isImpersonating = true;
     res.json({ message: 'Connexion en tant que PNJ réussie' });
   } catch (err) {
     handleDbError(err, res);
   }
+});
+
+app.post('/admin/stop-impersonating', (req, res) => {
+  if (!req.session.isImpersonating || !req.session.adminId) {
+    return res.status(400).json({ error: 'Pas en mode PNJ' });
+  }
+  req.session.userId = req.session.adminId;
+  req.session.username = req.session.adminUsername;
+  req.session.isAdmin = true;
+  req.session.pnjId = null;
+  req.session.isImpersonating = false;
+  delete req.session.adminId;
+  delete req.session.adminUsername;
+  res.json({ message: 'Retour au mode admin' });
 });
 
 app.put('/admin/pnjs/:id', requireAdmin, async (req, res) => {
