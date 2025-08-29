@@ -74,13 +74,16 @@ document.querySelector('form').addEventListener('submit', async (e) => {
     const data = await res.json();
 
     if (res.ok) {
+      if (data.isAdmin) {
+        window.location.href = 'admin.html';
+        return;
+      }
       showLoading();
       const delayMs = phases.length * 1000;
       await new Promise((resolve) => setTimeout(resolve, delayMs));
       hideLoading('Connexion réussie');
       setTimeout(() => {
-        const dest = data.isAdmin ? 'admin.html' : 'hub.html';
-        window.location.href = dest;
+        window.location.href = 'hub.html';
       }, 800);
     } else {
       showError(data.error);

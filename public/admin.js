@@ -21,27 +21,20 @@ async function loadPnjs() {
   const res = await fetch('/admin/pnjs');
   if (!res.ok) return;
   const pnjs = await res.json();
-  const list = document.getElementById('pnj-list');
-  list.innerHTML = '';
+  const tbody = document.querySelector('#pnj-table tbody');
+  tbody.innerHTML = '';
   pnjs.forEach(({ id, name, description, pending_requests, unread_messages }) => {
-    const li = document.createElement('li');
-    const span = document.createElement('span');
-    span.textContent = `${name} - ${description || ''} (${pending_requests} demandes, ${unread_messages} messages non lus)`;
-    span.classList.add('pnj-link');
-    span.addEventListener('click', async () => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `\n      <td>${name}</td>\n      <td>${description || ''}</td>\n      <td>${pending_requests}</td>\n      <td>${unread_messages}</td>\n      <td>\n        <button class="btn impersonate-btn">👁️</button>\n        <button class="btn delete-btn">🗑️</button>\n      </td>`;
+    tr.querySelector('.impersonate-btn').addEventListener('click', async () => {
       await fetch(`/admin/pnjs/${id}/impersonate`, { method: 'POST' });
       window.location.href = '/hub.html';
     });
-    li.appendChild(span);
-    const btn = document.createElement('button');
-    btn.textContent = '🗑️';
-    btn.classList.add('btn', 'delete-btn');
-    btn.addEventListener('click', async () => {
+    tr.querySelector('.delete-btn').addEventListener('click', async () => {
       await fetch(`/admin/pnjs/${id}`, { method: 'DELETE' });
       loadPnjs();
     });
-    li.appendChild(btn);
-    list.appendChild(li);
+    tbody.appendChild(tr);
   });
 }
 

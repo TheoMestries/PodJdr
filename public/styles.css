@@ -181,6 +181,47 @@ body.auth {
   height: calc(100vh - 70px);
 }
 
+#pnj-section {
+  flex: 1;
+  overflow-y: auto;
+}
+
+#pnj-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+}
+
+#pnj-table th,
+#pnj-table td {
+  border: 1px solid var(--primary);
+  padding: 8px;
+  text-align: left;
+}
+
+#pnj-table th {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.pnj-form {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.pnj-form label {
+  flex: 0 0 100px;
+}
+
+.pnj-form input {
+  flex: 1;
+  padding: 5px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--secondary);
+  color: var(--primary);
+}
+
 .sidebar {
   width: 260px;
   padding: 20px;
