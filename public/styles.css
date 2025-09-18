@@ -753,6 +753,49 @@ body.hack {
   color: rgba(255, 255, 255, 0.6);
 }
 
+@media (max-width: 640px) {
+  body.hack {
+    height: auto;
+    min-height: 100dvh;
+    overflow-y: auto;
+  }
+
+  .top-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .top-bar-actions {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  .hack-grid {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .hack-grid .panel {
+    min-height: auto;
+  }
+
+  .hack-grid .panel .shadow-list,
+  .shadow-list {
+    max-height: none;
+  }
+
+  .shadow-form textarea {
+    min-height: 100px;
+  }
+}
+
 .shadow-admin-grid {
   display: flex;
   flex-wrap: wrap;
