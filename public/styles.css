@@ -620,6 +620,7 @@ body.hack {
   flex-direction: column;
   height: 100dvh;
   overflow: hidden;
+
 }
 
 .top-bar-actions {
@@ -664,6 +665,7 @@ body.hack {
 
 .hack-grid .panel .shadow-form {
   flex-shrink: 0;
+
 }
 
 .shadow-form {
@@ -751,5 +753,6 @@ body.hack {
     padding: 15px;
     grid-template-columns: 1fr;
     grid-auto-rows: minmax(0, 1fr);
+
   }
 }
