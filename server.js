@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const session = require('express-session');
 const { pool } = require('./db');
@@ -63,6 +64,21 @@ async function ensureShadowAccessTables() {
   }
 }
 
+async function ensureShadowCodeTable() {
+  try {
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS shadow_codes (
+        code CHAR(4) PRIMARY KEY,
+        entity_type ENUM('user', 'pnj') NOT NULL,
+        entity_id INT NOT NULL,
+        UNIQUE KEY unique_shadow_entity (entity_type, entity_id)
+      )
+    `);
+  } catch (err) {
+    console.error('Erreur lors de la vérification de la table des codes shadow', err);
+  }
+}
+
 async function loadShadowAccessFromDb() {
   try {
     hiddenAccessUsers.clear();
@@ -97,15 +113,209 @@ async function loadShadowAccessFromDb() {
   }
 }
 
-ensureShadowAccessTables()
-  .then(loadShadowAccessFromDb)
-  .catch((err) => {
+async function initializeShadowInfrastructure() {
+  try {
+    await ensureShadowAccessTables();
+    await ensureShadowCodeTable();
+    await loadShadowAccessFromDb();
+    await refreshShadowCodeCache();
+    await ensureShadowCodesForType('user');
+    await ensureShadowCodesForType('pnj');
+  } catch (err) {
     console.error("Erreur lors de l'initialisation des accès shadow", err);
-  });
+  }
+}
 
-function formatShadowCode(type, id) {
-  const prefix = type === 'pnj' ? 'PNJ' : 'USR';
-  return `${prefix}-${String(id).padStart(4, '0')}`;
+initializeShadowInfrastructure();
+
+const shadowCodeCache = {
+  user: new Map(),
+  pnj: new Map(),
+};
+const shadowCodeReverseCache = new Map();
+const SHADOW_CODE_SPACE = 10000;
+
+function normalizeShadowType(type) {
+  return type === 'pnj' ? 'pnj' : 'user';
+}
+
+function setShadowCodeInCache(type, id, code) {
+  const normalizedType = normalizeShadowType(type);
+  const numericId = Number(id);
+  if (!Number.isInteger(numericId)) {
+    return;
+  }
+
+  const normalizedCode = String(code).padStart(4, '0');
+  const cache = shadowCodeCache[normalizedType];
+  const existingCode = cache.get(numericId);
+  if (existingCode && existingCode !== normalizedCode) {
+    shadowCodeReverseCache.delete(existingCode);
+  }
+
+  cache.set(numericId, normalizedCode);
+  shadowCodeReverseCache.set(normalizedCode, {
+    type: normalizedType,
+    id: numericId,
+  });
+}
+
+function clearShadowCodeCaches() {
+  shadowCodeCache.user.clear();
+  shadowCodeCache.pnj.clear();
+  shadowCodeReverseCache.clear();
+}
+
+function generateShadowCodeCandidate() {
+  const buffer = crypto.randomBytes(2);
+  const candidateNumber = buffer.readUInt16BE(0) % SHADOW_CODE_SPACE;
+  return String(candidateNumber).padStart(4, '0');
+}
+
+async function loadShadowCodeFromDb(type, id) {
+  try {
+    const [rows] = await pool.execute(
+      'SELECT code FROM shadow_codes WHERE entity_type = ? AND entity_id = ?',
+      [type, id]
+    );
+    if (!rows.length) {
+      return null;
+    }
+
+    const code = rows[0].code;
+    setShadowCodeInCache(type, id, code);
+    return code;
+  } catch (err) {
+    console.error('Erreur lors du chargement du code shadow depuis la base', err);
+    throw err;
+  }
+}
+
+async function createShadowCode(type, id) {
+  for (let attempt = 0; attempt < SHADOW_CODE_SPACE; attempt += 1) {
+    const candidate = generateShadowCodeCandidate();
+    if (shadowCodeReverseCache.has(candidate)) {
+      continue;
+    }
+
+    try {
+      await pool.execute(
+        'INSERT INTO shadow_codes (code, entity_type, entity_id) VALUES (?, ?, ?)',
+        [candidate, type, id]
+      );
+      setShadowCodeInCache(type, id, candidate);
+      return candidate;
+    } catch (err) {
+      if (err && err.code === 'ER_DUP_ENTRY') {
+        await refreshShadowCodeCache();
+        continue;
+      }
+      console.error('Erreur lors de la création du code shadow', err);
+      throw err;
+    }
+  }
+
+  throw new Error('Plus de codes shadow disponibles');
+}
+
+async function formatShadowCode(type, id) {
+  const normalizedType = normalizeShadowType(type);
+  const numericId = Number(id);
+  if (!Number.isInteger(numericId) || numericId < 0) {
+    throw new Error('Identifiant invalide pour la génération de code shadow');
+  }
+
+  const cache = shadowCodeCache[normalizedType];
+  if (cache.has(numericId)) {
+    return cache.get(numericId);
+  }
+
+  const loaded = await loadShadowCodeFromDb(normalizedType, numericId);
+  if (loaded) {
+    return loaded;
+  }
+
+  return createShadowCode(normalizedType, numericId);
+}
+
+async function decodeShadowCode(code) {
+  if (!code || typeof code !== 'string') {
+    return null;
+  }
+
+  const normalized = code.trim();
+  if (!/^\d{4}$/.test(normalized)) {
+    return null;
+  }
+
+  const cached = shadowCodeReverseCache.get(normalized);
+  if (cached) {
+    return cached;
+  }
+
+  try {
+    const [rows] = await pool.execute(
+      'SELECT entity_type, entity_id FROM shadow_codes WHERE code = ?',
+      [normalized]
+    );
+    if (!rows.length) {
+      return null;
+    }
+
+    const row = rows[0];
+    const normalizedType = normalizeShadowType(row.entity_type);
+    const numericId = Number(row.entity_id);
+    if (!Number.isInteger(numericId)) {
+      return null;
+    }
+
+    setShadowCodeInCache(normalizedType, numericId, normalized);
+    return {
+      type: normalizedType,
+      id: numericId,
+    };
+  } catch (err) {
+    console.error('Erreur lors du décodage du code shadow', err);
+    return null;
+  }
+}
+
+async function refreshShadowCodeCache() {
+  try {
+    clearShadowCodeCaches();
+    const [rows] = await pool.execute(
+      'SELECT code, entity_type, entity_id FROM shadow_codes'
+    );
+    rows.forEach((row) => {
+      const normalizedType = normalizeShadowType(row.entity_type);
+      const numericId = Number(row.entity_id);
+      if (!Number.isInteger(numericId)) {
+        return;
+      }
+      setShadowCodeInCache(normalizedType, numericId, row.code);
+    });
+  } catch (err) {
+    console.error('Erreur lors du chargement des codes shadow', err);
+  }
+}
+
+async function ensureShadowCodesForType(type) {
+  const table = type === 'pnj' ? 'pnjs' : 'users';
+  try {
+    const [rows] = await pool.execute(`SELECT id FROM ${table} ORDER BY id ASC`);
+    for (const row of rows) {
+      try {
+        await formatShadowCode(type, row.id);
+      } catch (err) {
+        console.error(
+          `Erreur lors de la génération du code shadow pour ${type} ${row.id}`,
+          err
+        );
+      }
+    }
+  } catch (err) {
+    console.error(`Erreur lors du chargement des identifiants ${table}`, err);
+  }
 }
 
 function hasShadowAccessForUser(username, isAdmin) {
@@ -136,12 +346,12 @@ function updateShadowAccessFromSession(req) {
   }
 }
 
-function getShadowIdentity(req) {
+async function getShadowIdentity(req) {
   if (req.session.pnjId) {
     return {
       type: 'pnj',
       id: req.session.pnjId,
-      code: formatShadowCode('pnj', req.session.pnjId),
+      code: await formatShadowCode('pnj', req.session.pnjId),
       label: req.session.username,
     };
   }
@@ -149,7 +359,7 @@ function getShadowIdentity(req) {
   return {
     type: 'user',
     id: req.session.userId,
-    code: formatShadowCode('user', req.session.userId),
+    code: await formatShadowCode('user', req.session.userId),
     label: req.session.username,
   };
 }
@@ -159,21 +369,20 @@ async function resolveShadowCode(code) {
     return null;
   }
 
-  const normalized = code.trim().toUpperCase();
-  const match = normalized.match(/^(USR|PNJ)-(\d{4,})$/);
-  if (!match) {
-    return null;
+  const normalized = code.trim();
+  let decoded = await decodeShadowCode(normalized);
+  if (!decoded) {
+    await refreshShadowCodeCache();
+    decoded = await decodeShadowCode(normalized);
+    if (!decoded) {
+      return null;
+    }
   }
 
-  const id = parseInt(match[2], 10);
-  if (Number.isNaN(id)) {
-    return null;
-  }
-
-  if (match[1] === 'USR') {
+  if (decoded.type === 'user') {
     const [rows] = await pool.execute(
       'SELECT id, username, is_admin FROM users WHERE id = ?',
-      [id]
+      [decoded.id]
     );
     if (!rows.length) {
       return null;
@@ -186,13 +395,13 @@ async function resolveShadowCode(code) {
     return {
       type: 'user',
       id: user.id,
-      code: formatShadowCode('user', user.id),
+      code: await formatShadowCode('user', user.id),
       label: user.username,
       hasAccess,
     };
   }
 
-  const [rows] = await pool.execute('SELECT id, name FROM pnjs WHERE id = ?', [id]);
+  const [rows] = await pool.execute('SELECT id, name FROM pnjs WHERE id = ?', [decoded.id]);
   if (!rows.length) {
     return null;
   }
@@ -201,7 +410,7 @@ async function resolveShadowCode(code) {
   return {
     type: 'pnj',
     id: pnj.id,
-    code: formatShadowCode('pnj', pnj.id),
+    code: await formatShadowCode('pnj', pnj.id),
     label: pnj.name,
     hasAccess,
   };
@@ -268,10 +477,16 @@ app.post('/register', async (req, res) => {
   const { username, password } = req.body;
   try {
     const hash = await bcrypt.hash(password, 10);
-    await pool.execute(
+    const [result] = await pool.execute(
       'INSERT INTO users (username, password_hash) VALUES (?, ?)',
       [username, hash]
     );
+    try {
+      await formatShadowCode('user', result.insertId);
+    } catch (codeErr) {
+      await pool.execute('DELETE FROM users WHERE id = ?', [result.insertId]);
+      throw codeErr;
+    }
     res.status(201).json({ message: 'Utilisateur créé' });
   } catch (err) {
     handleDbError(err, res);
@@ -295,6 +510,7 @@ app.post('/login', async (req, res) => {
     req.session.userId = user.id;
     req.session.username = username;
     req.session.isAdmin = user.is_admin === 1;
+    await formatShadowCode('user', user.id);
     updateShadowAccessFromSession(req);
     res.json({
       message: 'Connexion réussie',
@@ -635,27 +851,38 @@ app.post('/messages', requireAuth, async (req, res) => {
   }
 });
 
-app.get('/shadow/access', requireAuth, (req, res) => {
+app.get('/shadow/access', requireAuth, async (req, res) => {
   if (!req.session.hasShadowAccess) {
     return res.status(403).json({ error: 'Accès interdit' });
   }
-  const identity = getShadowIdentity(req);
-  res.json({
-    code: identity.code,
-    identity: identity.label,
-    type: identity.type,
-  });
+
+  try {
+    const identity = await getShadowIdentity(req);
+    res.json({
+      code: identity.code,
+      identity: identity.label,
+      type: identity.type,
+    });
+  } catch (err) {
+    console.error("Erreur lors de la récupération de l'identité shadow", err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 
-app.get('/shadow/messages', requireAuth, requireShadowAccess, (req, res) => {
-  const identity = getShadowIdentity(req);
-  const inbox = shadowMessages
-    .filter((message) => message.receiver.code === identity.code)
-    .map(formatShadowMessage);
-  const sent = shadowMessages
-    .filter((message) => message.sender.code === identity.code)
-    .map(formatShadowMessage);
-  res.json({ inbox, sent });
+app.get('/shadow/messages', requireAuth, requireShadowAccess, async (req, res) => {
+  try {
+    const identity = await getShadowIdentity(req);
+    const inbox = shadowMessages
+      .filter((message) => message.receiver.code === identity.code)
+      .map(formatShadowMessage);
+    const sent = shadowMessages
+      .filter((message) => message.sender.code === identity.code)
+      .map(formatShadowMessage);
+    res.json({ inbox, sent });
+  } catch (err) {
+    console.error('Erreur lors du chargement des messages shadow', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 
 app.post('/shadow/messages', requireAuth, requireShadowAccess, async (req, res) => {
@@ -670,7 +897,7 @@ app.post('/shadow/messages', requireAuth, requireShadowAccess, async (req, res) 
       return res.status(404).json({ error: 'Code contact introuvable' });
     }
 
-    const sender = getShadowIdentity(req);
+    const sender = await getShadowIdentity(req);
     const storedSender = { ...sender };
     const storedReceiver = {
       type: target.type,
@@ -961,10 +1188,16 @@ app.get('/admin/pnjs', requireAdmin, async (req, res) => {
 app.post('/admin/pnjs', requireAdmin, async (req, res) => {
   const { name, description } = req.body;
   try {
-    await pool.execute(
+    const [result] = await pool.execute(
       'INSERT INTO pnjs (name, description) VALUES (?, ?)',
       [name, description]
     );
+    try {
+      await formatShadowCode('pnj', result.insertId);
+    } catch (codeErr) {
+      await pool.execute('DELETE FROM pnjs WHERE id = ?', [result.insertId]);
+      throw codeErr;
+    }
     res.status(201).json({ message: 'PNJ créé' });
   } catch (err) {
     handleDbError(err, res);
@@ -981,6 +1214,7 @@ app.post('/admin/pnjs/:id/impersonate', requireAdmin, async (req, res) => {
     if (!rows.length) {
       return res.status(404).json({ error: 'PNJ introuvable' });
     }
+    await formatShadowCode('pnj', rows[0].id);
     req.session.adminId = req.session.userId;
     req.session.adminUsername = req.session.username;
     req.session.userId = null;

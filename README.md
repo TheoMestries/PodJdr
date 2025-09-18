@@ -106,6 +106,18 @@ CREATE TABLE shadow_access_pnjs (
 );
 ```
 
+Les codes de contact utilisés dans la messagerie sont stockés dans une table
+unique afin d'éviter tout doublon entre joueurs et PNJ :
+
+```sql
+CREATE TABLE shadow_codes (
+  code CHAR(4) PRIMARY KEY,
+  entity_type ENUM('user', 'pnj') NOT NULL,
+  entity_id INT NOT NULL,
+  UNIQUE KEY unique_shadow_entity (entity_type, entity_id)
+);
+```
+
 Les comptes listés dans les variables d'environnement `HIDDEN_MESSAGE_USERS`
 et `HIDDEN_MESSAGE_PNJS` restent pris en compte et apparaissent dans
 l'interface en lecture seule.
