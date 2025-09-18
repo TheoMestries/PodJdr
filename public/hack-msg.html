@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>POD 2200 - Canal fantôme</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="hack">
+  <header class="top-bar">
+    <div class="logo-wrapper">
+      <div class="logo-eye"><div class="pupil"></div></div>
+      <h1 class="logo">POD 2200</h1>
+    </div>
+    <div class="top-bar-actions">
+      <span id="shadow-identity" class="shadow-identity"></span>
+      <button id="back-btn" class="btn">Retour hub</button>
+    </div>
+  </header>
+  <main class="hack-grid">
+    <section class="panel identity-panel">
+      <h2>Canal fantôme</h2>
+      <p>Ce protocole n'est accessible qu'aux profils habilités.</p>
+      <p>Votre code d'émission : <span id="identity-code" class="shadow-code"></span></p>
+      <p id="identity-label" class="identity-label"></p>
+      <p class="tip">Saisissez un code contact puis votre message pour initier une transmission.</p>
+    </section>
+    <section class="panel send-panel">
+      <h2>Transmission</h2>
+      <form id="shadow-send-form" class="shadow-form">
+        <label for="shadow-code">Code contact</label>
+        <input id="shadow-code" type="text" placeholder="USR-0001" autocomplete="off" required />
+        <label for="shadow-message">Message</label>
+        <textarea id="shadow-message" rows="4" placeholder="Votre message..." required></textarea>
+        <button type="submit" class="btn">Transmettre</button>
+      </form>
+      <div id="shadow-error" class="error-message hidden"></div>
+      <div id="shadow-success" class="success-message hidden"></div>
+    </section>
+    <section class="panel mail-panel">
+      <h2>Boîte secrète</h2>
+      <ul id="shadow-inbox" class="shadow-list"></ul>
+    </section>
+    <section class="panel history-panel">
+      <h2>Transmissions envoyées</h2>
+      <ul id="shadow-sent" class="shadow-list"></ul>
+    </section>
+  </main>
+  <script src="hack-msg.js"></script>
+  <script src="eye.js"></script>
+</body>
+</html>

@@ -17,6 +17,148 @@ app.use(
 
 const diceLog = [];
 
+const hiddenAccessUsers = new Set(
+  (process.env.HIDDEN_MESSAGE_USERS || '')
+    .split(',')
+    .map((name) => name.trim().toLowerCase())
+    .filter(Boolean)
+);
+
+const hiddenAccessPnjs = new Set(
+  (process.env.HIDDEN_MESSAGE_PNJS || '')
+    .split(',')
+    .map((name) => name.trim().toLowerCase())
+    .filter(Boolean)
+);
+
+const allowAdminShadowAccess = process.env.HIDDEN_MESSAGE_ALLOW_ADMINS !== '0';
+
+const shadowMessages = [];
+let shadowMessageId = 1;
+
+function formatShadowCode(type, id) {
+  const prefix = type === 'pnj' ? 'PNJ' : 'USR';
+  return `${prefix}-${String(id).padStart(4, '0')}`;
+}
+
+function hasShadowAccessForUser(username, isAdmin) {
+  if (allowAdminShadowAccess && isAdmin) {
+    return true;
+  }
+  if (!username) {
+    return false;
+  }
+  return hiddenAccessUsers.has(username.toLowerCase());
+}
+
+function hasShadowAccessForPnj(name) {
+  if (!name) {
+    return false;
+  }
+  return hiddenAccessPnjs.has(name.toLowerCase());
+}
+
+function updateShadowAccessFromSession(req) {
+  if (req.session.pnjId) {
+    req.session.hasShadowAccess = hasShadowAccessForPnj(req.session.username);
+  } else {
+    req.session.hasShadowAccess = hasShadowAccessForUser(
+      req.session.username,
+      req.session.isAdmin
+    );
+  }
+}
+
+function getShadowIdentity(req) {
+  if (req.session.pnjId) {
+    return {
+      type: 'pnj',
+      id: req.session.pnjId,
+      code: formatShadowCode('pnj', req.session.pnjId),
+      label: req.session.username,
+    };
+  }
+
+  return {
+    type: 'user',
+    id: req.session.userId,
+    code: formatShadowCode('user', req.session.userId),
+    label: req.session.username,
+  };
+}
+
+async function resolveShadowCode(code) {
+  if (!code) {
+    return null;
+  }
+
+  const normalized = code.trim().toUpperCase();
+  const match = normalized.match(/^(USR|PNJ)-(\d{4,})$/);
+  if (!match) {
+    return null;
+  }
+
+  const id = parseInt(match[2], 10);
+  if (Number.isNaN(id)) {
+    return null;
+  }
+
+  if (match[1] === 'USR') {
+    const [rows] = await pool.execute(
+      'SELECT id, username, is_admin FROM users WHERE id = ?',
+      [id]
+    );
+    if (!rows.length) {
+      return null;
+    }
+    const user = rows[0];
+    const hasAccess = hasShadowAccessForUser(
+      user.username,
+      user.is_admin === 1
+    );
+    return {
+      type: 'user',
+      id: user.id,
+      code: formatShadowCode('user', user.id),
+      label: user.username,
+      hasAccess,
+    };
+  }
+
+  const [rows] = await pool.execute('SELECT id, name FROM pnjs WHERE id = ?', [id]);
+  if (!rows.length) {
+    return null;
+  }
+  const pnj = rows[0];
+  const hasAccess = hasShadowAccessForPnj(pnj.name);
+  return {
+    type: 'pnj',
+    id: pnj.id,
+    code: formatShadowCode('pnj', pnj.id),
+    label: pnj.name,
+    hasAccess,
+  };
+}
+
+function requireShadowAccess(req, res, next) {
+  if (!req.session.hasShadowAccess) {
+    return res.status(403).json({ error: 'Accès interdit' });
+  }
+  next();
+}
+
+function formatShadowMessage(message) {
+  return {
+    id: message.id,
+    senderCode: message.sender.code,
+    senderLabel: message.sender.label,
+    receiverCode: message.receiver.code,
+    receiverLabel: message.receiver.label,
+    content: message.content,
+    createdAt: message.createdAt,
+  };
+}
+
 // Statuts pour les relations utilisateur/PNJ dans la table pnj_contacts :
 // 0 - en attente de validation par le joueur
 // 1 - contact accepté
@@ -85,10 +227,12 @@ app.post('/login', async (req, res) => {
     req.session.userId = user.id;
     req.session.username = username;
     req.session.isAdmin = user.is_admin === 1;
+    updateShadowAccessFromSession(req);
     res.json({
       message: 'Connexion réussie',
       userId: user.id,
       isAdmin: req.session.isAdmin,
+      hasShadowAccess: !!req.session.hasShadowAccess,
     });
   } catch (err) {
     handleDbError(err, res);
@@ -107,6 +251,7 @@ app.get('/me', (req, res) => {
     isAdmin: !!req.session.isAdmin,
     isPnj: !!req.session.pnjId,
     isImpersonating: !!req.session.isImpersonating,
+    hasShadowAccess: !!req.session.hasShadowAccess,
   });
 });
 
@@ -422,6 +567,63 @@ app.post('/messages', requireAuth, async (req, res) => {
   }
 });
 
+app.get('/shadow/access', requireAuth, (req, res) => {
+  if (!req.session.hasShadowAccess) {
+    return res.status(403).json({ error: 'Accès interdit' });
+  }
+  const identity = getShadowIdentity(req);
+  res.json({
+    code: identity.code,
+    identity: identity.label,
+    type: identity.type,
+  });
+});
+
+app.get('/shadow/messages', requireAuth, requireShadowAccess, (req, res) => {
+  const identity = getShadowIdentity(req);
+  const inbox = shadowMessages
+    .filter((message) => message.receiver.code === identity.code)
+    .map(formatShadowMessage);
+  const sent = shadowMessages
+    .filter((message) => message.sender.code === identity.code)
+    .map(formatShadowMessage);
+  res.json({ inbox, sent });
+});
+
+app.post('/shadow/messages', requireAuth, requireShadowAccess, async (req, res) => {
+  const { contactCode, content } = req.body;
+  if (!contactCode || !content || !content.trim()) {
+    return res.status(400).json({ error: 'Code contact et message requis' });
+  }
+
+  try {
+    const target = await resolveShadowCode(contactCode);
+    if (!target || !target.hasAccess) {
+      return res.status(404).json({ error: 'Code contact introuvable' });
+    }
+
+    const sender = getShadowIdentity(req);
+    const storedSender = { ...sender };
+    const storedReceiver = {
+      type: target.type,
+      id: target.id,
+      code: target.code,
+      label: target.label,
+    };
+    const message = {
+      id: shadowMessageId++,
+      sender: storedSender,
+      receiver: storedReceiver,
+      content: content.trim(),
+      createdAt: new Date().toISOString(),
+    };
+    shadowMessages.push(message);
+    res.status(201).json({ message: 'Transmission envoyée', payload: formatShadowMessage(message) });
+  } catch (err) {
+    handleDbError(err, res);
+  }
+});
+
 // Lancer de dés
 app.post('/dice', requireAuth, async (req, res) => {
   let diceArray = [];
@@ -610,6 +812,7 @@ app.post('/admin/pnjs/:id/impersonate', requireAdmin, async (req, res) => {
     req.session.pnjId = rows[0].id;
     req.session.username = rows[0].name;
     req.session.isImpersonating = true;
+    updateShadowAccessFromSession(req);
     res.json({ message: 'Connexion en tant que PNJ réussie' });
   } catch (err) {
     handleDbError(err, res);
@@ -627,6 +830,7 @@ app.post('/admin/stop-impersonating', (req, res) => {
   req.session.isImpersonating = false;
   delete req.session.adminId;
   delete req.session.adminUsername;
+  updateShadowAccessFromSession(req);
   res.json({ message: 'Retour au mode admin' });
 });
 
