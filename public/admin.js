@@ -15,6 +15,7 @@ async function init() {
     return;
   }
   loadPnjs();
+  loadShadowAccess();
 }
 
 async function loadPnjs() {
@@ -52,6 +53,75 @@ document.getElementById('pnj-form').addEventListener('submit', async (e) => {
     document.getElementById('pnj-description').value = '';
     loadPnjs();
   }
+});
+
+async function loadShadowAccess() {
+  const res = await fetch('/admin/shadow-access');
+  if (!res.ok) return;
+  const { users, pnjs } = await res.json();
+  renderShadowList(
+    document.getElementById('shadow-user-list'),
+    users,
+    'username'
+  );
+  renderShadowList(document.getElementById('shadow-pnj-list'), pnjs, 'name');
+}
+
+function renderShadowList(listEl, items, labelKey) {
+  listEl.innerHTML = '';
+  if (!items || !items.length) {
+    const li = document.createElement('li');
+    li.textContent = 'Aucun accès enregistré';
+    li.classList.add('empty-entry');
+    listEl.appendChild(li);
+    return;
+  }
+
+  items.forEach((item) => {
+    const li = document.createElement('li');
+    const label = item[labelKey] || '';
+    const sourceLabel = item.source === 'env' ? ' (env)' : '';
+    li.textContent = `${label}${sourceLabel}`;
+    listEl.appendChild(li);
+  });
+}
+
+document.getElementById('shadow-user-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const input = document.getElementById('shadow-user-name');
+  const username = input.value.trim();
+  if (!username) return;
+  const res = await fetch('/admin/shadow-access', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: 'user', identifier: username }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    alert(err.error || "Impossible d'accorder l'accès");
+    return;
+  }
+  input.value = '';
+  loadShadowAccess();
+});
+
+document.getElementById('shadow-pnj-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const input = document.getElementById('shadow-pnj-name');
+  const name = input.value.trim();
+  if (!name) return;
+  const res = await fetch('/admin/shadow-access', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: 'pnj', identifier: name }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    alert(err.error || "Impossible d'accorder l'accès");
+    return;
+  }
+  input.value = '';
+  loadShadowAccess();
 });
 
 init();

@@ -17,24 +17,91 @@ app.use(
 
 const diceLog = [];
 
-const hiddenAccessUsers = new Set(
-  (process.env.HIDDEN_MESSAGE_USERS || '')
-    .split(',')
-    .map((name) => name.trim().toLowerCase())
-    .filter(Boolean)
+const envHiddenAccessUsersRaw = (process.env.HIDDEN_MESSAGE_USERS || '')
+  .split(',')
+  .map((name) => name.trim())
+  .filter(Boolean);
+
+const envHiddenAccessPnjsRaw = (process.env.HIDDEN_MESSAGE_PNJS || '')
+  .split(',')
+  .map((name) => name.trim())
+  .filter(Boolean);
+
+const envHiddenAccessUsers = envHiddenAccessUsersRaw.map((name) =>
+  name.toLowerCase()
 );
 
-const hiddenAccessPnjs = new Set(
-  (process.env.HIDDEN_MESSAGE_PNJS || '')
-    .split(',')
-    .map((name) => name.trim().toLowerCase())
-    .filter(Boolean)
+const envHiddenAccessPnjs = envHiddenAccessPnjsRaw.map((name) =>
+  name.toLowerCase()
 );
+
+const hiddenAccessUsers = new Set(envHiddenAccessUsers);
+
+const hiddenAccessPnjs = new Set(envHiddenAccessPnjs);
 
 const allowAdminShadowAccess = process.env.HIDDEN_MESSAGE_ALLOW_ADMINS !== '0';
 
 const shadowMessages = [];
 let shadowMessageId = 1;
+
+async function ensureShadowAccessTables() {
+  try {
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS shadow_access_users (
+        user_id INT PRIMARY KEY,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS shadow_access_pnjs (
+        pnj_id INT PRIMARY KEY,
+        FOREIGN KEY (pnj_id) REFERENCES pnjs(id) ON DELETE CASCADE
+      )
+    `);
+  } catch (err) {
+    console.error('Erreur lors de la vérification des tables shadow access', err);
+  }
+}
+
+async function loadShadowAccessFromDb() {
+  try {
+    hiddenAccessUsers.clear();
+    envHiddenAccessUsers.forEach((name) => hiddenAccessUsers.add(name));
+
+    hiddenAccessPnjs.clear();
+    envHiddenAccessPnjs.forEach((name) => hiddenAccessPnjs.add(name));
+
+    const [userRows] = await pool.execute(
+      `SELECT u.username
+       FROM shadow_access_users sau
+       JOIN users u ON u.id = sau.user_id`
+    );
+    userRows.forEach((row) => {
+      if (row.username) {
+        hiddenAccessUsers.add(row.username.toLowerCase());
+      }
+    });
+
+    const [pnjRows] = await pool.execute(
+      `SELECT p.name
+       FROM shadow_access_pnjs sap
+       JOIN pnjs p ON p.id = sap.pnj_id`
+    );
+    pnjRows.forEach((row) => {
+      if (row.name) {
+        hiddenAccessPnjs.add(row.name.toLowerCase());
+      }
+    });
+  } catch (err) {
+    console.error('Erreur lors du chargement des accès shadow depuis la base', err);
+  }
+}
+
+ensureShadowAccessTables()
+  .then(loadShadowAccessFromDb)
+  .catch((err) => {
+    console.error("Erreur lors de l'initialisation des accès shadow", err);
+  });
 
 function formatShadowCode(type, id) {
   const prefix = type === 'pnj' ? 'PNJ' : 'USR';
@@ -168,6 +235,7 @@ function requireAuth(req, res, next) {
   if (!req.session.userId && !req.session.pnjId) {
     return res.status(401).json({ error: 'Non authentifié' });
   }
+  updateShadowAccessFromSession(req);
   next();
 }
 
@@ -619,6 +687,114 @@ app.post('/shadow/messages', requireAuth, requireShadowAccess, async (req, res) 
     };
     shadowMessages.push(message);
     res.status(201).json({ message: 'Transmission envoyée', payload: formatShadowMessage(message) });
+  } catch (err) {
+    handleDbError(err, res);
+  }
+});
+
+app.get('/admin/shadow-access', requireAdmin, async (req, res) => {
+  try {
+    const [userRows] = await pool.execute(
+      `SELECT u.id, u.username
+       FROM shadow_access_users sau
+       JOIN users u ON u.id = sau.user_id
+       ORDER BY u.username ASC`
+    );
+    const [pnjRows] = await pool.execute(
+      `SELECT p.id, p.name
+       FROM shadow_access_pnjs sap
+       JOIN pnjs p ON p.id = sap.pnj_id
+       ORDER BY p.name ASC`
+    );
+
+    const envUsers = envHiddenAccessUsersRaw
+      .map((name, index) => ({
+        display: name,
+        normalized: envHiddenAccessUsers[index],
+      }))
+      .filter(
+        ({ normalized }) =>
+          !userRows.some((row) => row.username.toLowerCase() === normalized)
+      )
+      .map(({ display }) => ({ username: display, source: 'env' }));
+
+    const envPnjs = envHiddenAccessPnjsRaw
+      .map((name, index) => ({
+        display: name,
+        normalized: envHiddenAccessPnjs[index],
+      }))
+      .filter(
+        ({ normalized }) =>
+          !pnjRows.some((row) => row.name.toLowerCase() === normalized)
+      )
+      .map(({ display }) => ({ name: display, source: 'env' }));
+
+    res.json({
+      users: [
+        ...userRows.map((row) => ({
+          id: row.id,
+          username: row.username,
+          source: 'db',
+        })),
+        ...envUsers,
+      ],
+      pnjs: [
+        ...pnjRows.map((row) => ({
+          id: row.id,
+          name: row.name,
+          source: 'db',
+        })),
+        ...envPnjs,
+      ],
+    });
+  } catch (err) {
+    handleDbError(err, res);
+  }
+});
+
+app.post('/admin/shadow-access', requireAdmin, async (req, res) => {
+  const { type, identifier } = req.body;
+  const normalized = (identifier || '').trim().toLowerCase();
+  if (!type || !normalized || !['user', 'pnj'].includes(type)) {
+    return res.status(400).json({ error: 'Paramètres invalides' });
+  }
+
+  try {
+    if (type === 'user') {
+      const [rows] = await pool.execute(
+        'SELECT id, username FROM users WHERE LOWER(username) = ? LIMIT 1',
+        [normalized]
+      );
+      if (!rows.length) {
+        return res.status(404).json({ error: 'Utilisateur introuvable' });
+      }
+      const user = rows[0];
+      await pool.execute(
+        'INSERT INTO shadow_access_users (user_id) VALUES (?) ON DUPLICATE KEY UPDATE user_id = user_id',
+        [user.id]
+      );
+      await loadShadowAccessFromDb();
+      return res
+        .status(201)
+        .json({ message: `Accès shadow accordé à l\'utilisateur ${user.username}` });
+    }
+
+    const [rows] = await pool.execute(
+      'SELECT id, name FROM pnjs WHERE LOWER(name) = ? LIMIT 1',
+      [normalized]
+    );
+    if (!rows.length) {
+      return res.status(404).json({ error: 'PNJ introuvable' });
+    }
+    const pnj = rows[0];
+    await pool.execute(
+      'INSERT INTO shadow_access_pnjs (pnj_id) VALUES (?) ON DUPLICATE KEY UPDATE pnj_id = pnj_id',
+      [pnj.id]
+    );
+    await loadShadowAccessFromDb();
+    return res
+      .status(201)
+      .json({ message: `Accès shadow accordé au PNJ ${pnj.name}` });
   } catch (err) {
     handleDbError(err, res);
   }

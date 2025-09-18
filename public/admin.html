@@ -38,6 +38,36 @@
         <button type="submit" class="btn">Ajouter</button>
       </form>
     </section>
+
+    <section id="shadow-section" class="panel">
+      <h2>Accès Shadow</h2>
+      <div class="shadow-admin-grid">
+        <form id="shadow-user-form" class="shadow-admin-form">
+          <h3>Donner l'accès à un joueur</h3>
+          <label for="shadow-user-name">Nom d'utilisateur</label>
+          <input type="text" id="shadow-user-name" autocomplete="off" required />
+          <button type="submit" class="btn">Accorder</button>
+        </form>
+
+        <form id="shadow-pnj-form" class="shadow-admin-form">
+          <h3>Donner l'accès à un PNJ</h3>
+          <label for="shadow-pnj-name">Nom du PNJ</label>
+          <input type="text" id="shadow-pnj-name" autocomplete="off" required />
+          <button type="submit" class="btn">Accorder</button>
+        </form>
+      </div>
+
+      <div class="shadow-admin-lists">
+        <div>
+          <h3>Joueurs autorisés</h3>
+          <ul id="shadow-user-list" class="shadow-admin-list"></ul>
+        </div>
+        <div>
+          <h3>PNJ autorisés</h3>
+          <ul id="shadow-pnj-list" class="shadow-admin-list"></ul>
+        </div>
+      </div>
+    </section>
   </main>
 
   <script src="admin.js"></script>
