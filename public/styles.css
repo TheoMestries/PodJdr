@@ -363,6 +363,7 @@ body.auth {
   flex-direction: column;
   gap: 20px;
   padding: 20px;
+  min-height: 0;
 }
 
 .user-bar {
@@ -377,6 +378,8 @@ body.auth {
   display: flex;
   flex-direction: column;
   padding: 20px;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .chat.hidden {
