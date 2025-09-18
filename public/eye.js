@@ -16,3 +16,65 @@ document.addEventListener('DOMContentLoaded', () => {
     pupil.style.transform = `translate(${pupilX}px, ${pupilY}px)`;
   });
 });
+
+const secretSequence = [
+  'arrowup',
+  'arrowup',
+  'arrowdown',
+  'arrowdown',
+  'arrowleft',
+  'arrowright',
+  'arrowleft',
+  'arrowright',
+  'b',
+  'a',
+];
+let secretIndex = 0;
+let shadowRequestInFlight = false;
+
+function normalizeKey(key) {
+  if (!key) {
+    return '';
+  }
+  return key.toLowerCase();
+}
+
+async function triggerShadowAccess() {
+  if (shadowRequestInFlight) {
+    return;
+  }
+  shadowRequestInFlight = true;
+  try {
+    const res = await fetch('/shadow/access');
+    if (res.ok) {
+      window.location.href = 'hack-msg.html';
+      return;
+    }
+    if (res.status === 401) {
+      window.alert('Authentification requise pour ce protocole.');
+    } else if (res.status === 403) {
+      window.alert('Signal brouillé : accès refusé.');
+    }
+  } catch (err) {
+    console.error('Échec de l’ouverture du canal fantôme', err);
+  } finally {
+    shadowRequestInFlight = false;
+  }
+}
+
+document.addEventListener('keydown', (event) => {
+  const key = normalizeKey(event.key);
+  if (!key) {
+    return;
+  }
+
+  if (key === secretSequence[secretIndex]) {
+    secretIndex += 1;
+    if (secretIndex === secretSequence.length) {
+      secretIndex = 0;
+      triggerShadowAccess();
+    }
+  } else {
+    secretIndex = key === secretSequence[0] ? 1 : 0;
+  }
+});
