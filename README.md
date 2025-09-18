@@ -87,3 +87,25 @@ CREATE TABLE messages (
 
 La colonne `is_read` indique si le message a été consulté par son destinataire
 (`0` = non lu, `1` = lu).
+
+## Accès Shadow
+
+L'interface administrateur permet d'accorder l'accès à la messagerie « Shadow »
+à des joueurs ou à des PNJ. Deux tables stockent ces autorisations et sont
+créées automatiquement si elles n'existent pas :
+
+```sql
+CREATE TABLE shadow_access_users (
+  user_id INT PRIMARY KEY,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE shadow_access_pnjs (
+  pnj_id INT PRIMARY KEY,
+  FOREIGN KEY (pnj_id) REFERENCES pnjs(id) ON DELETE CASCADE
+);
+```
+
+Les comptes listés dans les variables d'environnement `HIDDEN_MESSAGE_USERS`
+et `HIDDEN_MESSAGE_PNJS` restent pris en compte et apparaissent dans
+l'interface en lecture seule.
