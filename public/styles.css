@@ -18,6 +18,7 @@
 body {
   margin: 0;
   min-height: 100vh;
+  min-height: 100dvh;
   font-family: var(--font-family);
   color: var(--primary);
   background: radial-gradient(circle at center, #0d0221 0%, var(--dark-bg) 100%);
@@ -214,6 +215,7 @@ body.auth {
 .hub-container {
   display: flex;
   height: calc(100vh - 70px);
+  height: calc(100dvh - 70px);
 }
 
 #pnj-section {
