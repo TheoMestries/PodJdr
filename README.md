@@ -12,6 +12,84 @@ npm start
 Ouvrir ensuite [http://localhost:3000](http://localhost:3000) pour voir la page de
 connexion.
 
+### Configuration de la base de données
+
+Le pool MySQL lit plusieurs variables d'environnement pour s'adapter à ton
+serveur :
+
+| Variable        | Valeur par défaut | Description |
+| --------------- | ----------------- | ----------- |
+| `DB_HOST`       | `127.0.0.1`       | Hôte de la base. Utilise `127.0.0.1` si MariaDB n'écoute pas sur l'IPv6 `::1` associé à `localhost`. |
+| `DB_PORT`       | `3306`            | Port de connexion (optionnel si standard). |
+| `DB_USER`       | `root`            | Utilisateur de connexion. |
+| `DB_PASSWORD`   | `root`            | Mot de passe associé. |
+| `DB_NAME`       | `bdd_podjdr`      | Base de données à utiliser. |
+| `DB_CONN_LIMIT` | _(non défini)_    | Taille maximale du pool (optionnel). |
+
+Adapte ces valeurs à la base créée sur ton serveur (par exemple `DB_USER=podjdr`
+et `DB_PASSWORD=motdepasse_solide`).
+
+## Déploiement derrière un reverse proxy existant
+
+L'application Node écoute sur le port défini par la variable d'environnement
+`PORT` (3000 par défaut). Sur un serveur où le port 80 est déjà utilisé par un
+autre site, laisse l'application tourner sur son port interne et fais-la
+desservir par le reverse proxy existant.
+
+### Exemple avec Nginx et un sous-domaine
+
+Ajoute un bloc serveur dédié (par exemple pour `podjdr.trancheur.com`) dans
+`/etc/nginx/sites-available/podjdr` :
+
+```nginx
+server {
+  listen 80;
+  server_name podjdr.trancheur.com;
+
+  location / {
+    proxy_pass http://127.0.0.1:3000;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection 'upgrade';
+    proxy_set_header Host $host;
+    proxy_cache_bypass $http_upgrade;
+  }
+}
+```
+
+Active ensuite le site et recharge Nginx :
+
+```bash
+sudo ln -s /etc/nginx/sites-available/podjdr /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+### Exemple dans un site déjà existant
+
+Si tu dois partager le même nom de domaine que le site actuel, ajoute une
+section `location` dans son bloc serveur :
+
+```nginx
+location /podjdr/ {
+  proxy_pass http://127.0.0.1:3000/;
+  proxy_http_version 1.1;
+  proxy_set_header Upgrade $http_upgrade;
+  proxy_set_header Connection 'upgrade';
+  proxy_set_header Host $host;
+  proxy_cache_bypass $http_upgrade;
+}
+```
+
+Redémarre Nginx pour prendre en compte la modification :
+
+```bash
+sudo systemctl reload nginx
+```
+
+Dans ce cas, configure l'application pour qu'elle génère des liens relatifs ou
+prenne en compte le préfixe `/podjdr/` si nécessaire.
+
 ## Base de données
 
 Les lancers de dés sont maintenant enregistrés dans la table `dice_rolls` afin de
