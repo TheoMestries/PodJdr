@@ -3,8 +3,8 @@ const mysql = require('mysql2/promise');
 const {
   DB_HOST = '127.0.0.1',
   DB_PORT,
-  DB_USER = 'root',
-  DB_PASSWORD = 'root',
+  DB_USER = 'podjdr',
+  DB_PASSWORD = 'podmdp',
   DB_NAME = 'bdd_podjdr',
   DB_CONN_LIMIT,
 } = process.env;
