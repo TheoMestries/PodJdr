@@ -23,6 +23,79 @@ if (exitBtn) {
   });
 }
 
+const sidebar = document.getElementById('sidebar');
+const sidebarToggle = document.getElementById('sidebar-toggle');
+const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+const mobileQuery = window.matchMedia('(max-width: 900px)');
+const topBar = document.querySelector('.top-bar');
+
+function updateTopBarHeight() {
+  if (!topBar) return;
+  document.documentElement.style.setProperty('--top-bar-height', `${topBar.offsetHeight}px`);
+}
+
+updateTopBarHeight();
+window.addEventListener('resize', updateTopBarHeight);
+
+function setSidebarState(open) {
+  if (!sidebar) return;
+  const isMobile = mobileQuery.matches;
+  sidebar.classList.toggle('open', open && isMobile);
+  if (sidebarBackdrop) {
+    const showBackdrop = open && isMobile;
+    sidebarBackdrop.classList.toggle('hidden', !showBackdrop);
+    sidebarBackdrop.setAttribute('aria-hidden', showBackdrop ? 'false' : 'true');
+  }
+  if (sidebarToggle) {
+    sidebarToggle.setAttribute('aria-expanded', open && isMobile ? 'true' : 'false');
+  }
+  if (isMobile) {
+    document.body.classList.toggle('sidebar-open', open);
+  } else {
+    document.body.classList.remove('sidebar-open');
+  }
+  updateTopBarHeight();
+}
+
+function closeSidebar() {
+  setSidebarState(false);
+}
+
+function toggleSidebar() {
+  if (!sidebar) return;
+  const shouldOpen = !sidebar.classList.contains('open');
+  setSidebarState(shouldOpen);
+}
+
+if (sidebarToggle && sidebar) {
+  sidebarToggle.addEventListener('click', toggleSidebar);
+}
+
+if (sidebarBackdrop) {
+  sidebarBackdrop.addEventListener('click', closeSidebar);
+}
+
+const handleMobileChange = (event) => {
+  if (!event.matches) {
+    closeSidebar();
+  }
+  updateTopBarHeight();
+};
+
+if (mobileQuery.addEventListener) {
+  mobileQuery.addEventListener('change', handleMobileChange);
+} else if (mobileQuery.addListener) {
+  mobileQuery.addListener(handleMobileChange);
+}
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    closeSidebar();
+  }
+});
+
+closeSidebar();
+
 async function init() {
   const res = await fetch('/me');
   if (!res.ok) {
@@ -145,6 +218,7 @@ document
 async function openChat(id, username, contactIsPnj) {
   currentContactId = id;
   currentContactIsPnj = contactIsPnj;
+  closeSidebar();
   document.getElementById('chat-with').textContent = username;
   document.getElementById('chat-section').classList.remove('hidden');
   const placeholder = document.getElementById('placeholder');

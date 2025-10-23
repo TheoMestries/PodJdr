@@ -12,12 +12,24 @@
       <div class="logo-eye"><div class="pupil"></div></div>
       <h1 class="logo">POD 2200</h1>
     </div>
-    <button id="dice-btn" class="btn">Dés</button>
-    <button id="exit-pnj-btn" class="btn hidden">Quitter PNJ</button>
-    <button id="logout-btn" class="btn">Déconnexion</button>
+    <div class="top-bar-actions">
+      <button
+        id="sidebar-toggle"
+        type="button"
+        class="btn sidebar-toggle"
+        aria-controls="sidebar"
+        aria-expanded="false"
+      >
+        Contacts
+      </button>
+      <button id="dice-btn" class="btn">Dés</button>
+      <button id="exit-pnj-btn" class="btn hidden">Quitter PNJ</button>
+      <button id="logout-btn" class="btn">Déconnexion</button>
+    </div>
   </header>
-    <div class="hub-container">
-      <aside class="sidebar">
+    <div class="hub-container has-sidebar">
+      <div id="sidebar-backdrop" class="sidebar-backdrop hidden" aria-hidden="true"></div>
+      <aside id="sidebar" class="sidebar">
         <section class="sidebar-section panel">
           <h2>Contacts</h2>
           <ul id="contact-list" class="contact-list"></ul>
