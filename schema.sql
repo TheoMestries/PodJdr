@@ -52,18 +52,13 @@ CREATE TABLE IF NOT EXISTS messages (
   content TEXT NOT NULL,
   is_read TINYINT NOT NULL DEFAULT 0,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  -- Les contraintes CHECK garantissant un seul type d'expéditeur/récepteur
+  -- ont été retirées pour assurer la compatibilité avec MariaDB installée ;
+  -- cette validation doit être effectuée par l'application.
   CONSTRAINT fk_messages_sender_user FOREIGN KEY (sender_user_id) REFERENCES users(id) ON DELETE SET NULL,
   CONSTRAINT fk_messages_sender_pnj FOREIGN KEY (sender_pnj_id) REFERENCES pnjs(id) ON DELETE SET NULL,
   CONSTRAINT fk_messages_receiver_user FOREIGN KEY (receiver_user_id) REFERENCES users(id) ON DELETE SET NULL,
-  CONSTRAINT fk_messages_receiver_pnj FOREIGN KEY (receiver_pnj_id) REFERENCES pnjs(id) ON DELETE SET NULL,
-  CONSTRAINT chk_messages_sender CHECK (
-    (sender_user_id IS NOT NULL AND sender_pnj_id IS NULL)
-    OR (sender_user_id IS NULL AND sender_pnj_id IS NOT NULL)
-  ),
-  CONSTRAINT chk_messages_receiver CHECK (
-    (receiver_user_id IS NOT NULL AND receiver_pnj_id IS NULL)
-    OR (receiver_user_id IS NULL AND receiver_pnj_id IS NOT NULL)
-  )
+  CONSTRAINT fk_messages_receiver_pnj FOREIGN KEY (receiver_pnj_id) REFERENCES pnjs(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE INDEX idx_messages_receiver_user ON messages (receiver_user_id, is_read);
