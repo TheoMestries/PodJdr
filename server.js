@@ -886,13 +886,16 @@ app.get('/shadow/messages', requireAuth, requireShadowAccess, async (req, res) =
 });
 
 app.post('/shadow/messages', requireAuth, requireShadowAccess, async (req, res) => {
-  const { contactCode, content } = req.body;
-  if (!contactCode || !content || !content.trim()) {
+  const contactCodeInput =
+    typeof req.body.contactCode === 'string' ? req.body.contactCode.trim() : '';
+  const contentInput = typeof req.body.content === 'string' ? req.body.content : '';
+  const normalizedContent = contentInput.replace(/\r\n?/g, '\n');
+  if (!contactCodeInput || !normalizedContent.trim()) {
     return res.status(400).json({ error: 'Code contact et message requis' });
   }
 
   try {
-    const target = await resolveShadowCode(contactCode);
+    const target = await resolveShadowCode(contactCodeInput);
     if (!target || !target.hasAccess) {
       return res.status(404).json({ error: 'Code contact introuvable' });
     }
@@ -909,7 +912,7 @@ app.post('/shadow/messages', requireAuth, requireShadowAccess, async (req, res) 
       id: shadowMessageId++,
       sender: storedSender,
       receiver: storedReceiver,
-      content: content.trim(),
+      content: normalizedContent,
       createdAt: new Date().toISOString(),
     };
     shadowMessages.push(message);

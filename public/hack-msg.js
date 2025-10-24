@@ -162,8 +162,9 @@ form.addEventListener('submit', async (event) => {
   event.preventDefault();
   clearFeedback();
   const code = codeInput.value.trim();
-  const message = messageInput.value.trim();
-  if (!code || !message) {
+  const rawMessage = messageInput.value;
+  const normalizedMessage = rawMessage.replace(/\r\n?/g, '\n');
+  if (!code || !normalizedMessage.trim()) {
     showError('Code contact et message requis.');
     return;
   }
@@ -172,7 +173,7 @@ form.addEventListener('submit', async (event) => {
     const res = await fetch('/shadow/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contactCode: code, content: message }),
+      body: JSON.stringify({ contactCode: code, content: normalizedMessage }),
     });
     const data = await res.json();
     if (!res.ok) {
