@@ -841,6 +841,7 @@ body.hack {
 
 .shadow-form textarea {
   min-height: 120px;
+  white-space: pre-wrap;
 }
 
 .shadow-code {
