@@ -11,7 +11,7 @@ let announcementAckInFlight = false;
 
 const announcementOverlay = document.getElementById('announcement-overlay');
 const announcementMessageEl = document.getElementById('announcement-message');
-const announcementAuthorEl = document.getElementById('announcement-author');
+const announcementSignatureEl = document.getElementById('announcement-signature');
 const announcementCloseBtn = document.getElementById('announcement-close-btn');
 let activeAnnouncement = null;
 
@@ -315,8 +315,19 @@ async function fetchAnnouncements() {
     );
 
     data.forEach((announcement) => {
-      if (!knownIds.has(announcement.id)) {
-        announcementQueue.push(announcement);
+      if (
+        !knownIds.has(announcement.id) &&
+        typeof announcement.message === 'string' &&
+        announcement.message.trim().length
+      ) {
+        announcementQueue.push({
+          ...announcement,
+          message: announcement.message.trim(),
+          signature:
+            typeof announcement.signature === 'string'
+              ? announcement.signature.trim()
+              : '',
+        });
         knownIds.add(announcement.id);
       }
     });
@@ -339,15 +350,48 @@ function showNextAnnouncement() {
   displayAnnouncement(nextAnnouncement);
 }
 
+function adjustAnnouncementLayout(messageLength) {
+  if (!announcementMessageEl) return;
+  announcementMessageEl.style.fontSize = '';
+  announcementMessageEl.classList.remove(
+    'announcement-message--long',
+    'announcement-message--very-long',
+    'announcement-message--extreme'
+  );
+
+  if (messageLength > 1400) {
+    announcementMessageEl.classList.add('announcement-message--extreme');
+  } else if (messageLength > 900) {
+    announcementMessageEl.classList.add('announcement-message--very-long');
+  } else if (messageLength > 500) {
+    announcementMessageEl.classList.add('announcement-message--long');
+  }
+}
+
 function displayAnnouncement(announcement) {
   if (!announcementOverlay || !announcementMessageEl || !announcementCloseBtn) {
     return;
   }
-  announcementMessageEl.textContent = announcement.message || '';
-  if (announcementAuthorEl) {
-    announcementAuthorEl.textContent = announcement.author
-      ? `— ${announcement.author}`
-      : '';
+  const message = (announcement.message || '').trim();
+  if (!message) {
+    hideAnnouncementOverlay();
+    activeAnnouncement = null;
+    showNextAnnouncement();
+    return;
+  }
+
+  announcementMessageEl.textContent = message;
+  adjustAnnouncementLayout(message.length);
+
+  if (announcementSignatureEl) {
+    const signatureText = (announcement.signature || '').trim();
+    if (signatureText) {
+      announcementSignatureEl.textContent = `— ${signatureText}`;
+      announcementSignatureEl.classList.remove('hidden');
+    } else {
+      announcementSignatureEl.textContent = '';
+      announcementSignatureEl.classList.add('hidden');
+    }
   }
   announcementOverlay.classList.remove('hidden');
   announcementCloseBtn.disabled = false;
@@ -372,7 +416,7 @@ async function acknowledgeCurrentAnnouncement() {
     const res = await fetch(`/announcements/${activeAnnouncement.id}/read`, {
       method: 'POST',
     });
-    if (!res.ok) {
+    if (!res.ok && res.status !== 404) {
       throw new Error('Réponse serveur invalide');
     }
     hideAnnouncementOverlay();
@@ -391,6 +435,18 @@ async function acknowledgeCurrentAnnouncement() {
 function hideAnnouncementOverlay() {
   if (!announcementOverlay) return;
   announcementOverlay.classList.add('hidden');
+  if (announcementMessageEl) {
+    announcementMessageEl.textContent = '';
+    announcementMessageEl.classList.remove(
+      'announcement-message--long',
+      'announcement-message--very-long',
+      'announcement-message--extreme'
+    );
+  }
+  if (announcementSignatureEl) {
+    announcementSignatureEl.textContent = '';
+    announcementSignatureEl.classList.add('hidden');
+  }
 }
 
 window.addEventListener('beforeunload', () => {

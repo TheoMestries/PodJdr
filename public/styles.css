@@ -1021,7 +1021,8 @@ body.hack {
   gap: 1rem;
 }
 
-.announcement-form textarea {
+.announcement-form textarea,
+.announcement-form input[type='text'] {
   width: 100%;
   padding: 12px;
   border-radius: 8px;
@@ -1029,6 +1030,9 @@ body.hack {
   background: rgba(10, 10, 25, 0.6);
   color: var(--primary);
   font-family: inherit;
+}
+
+.announcement-form textarea {
   resize: vertical;
 }
 
@@ -1125,13 +1129,16 @@ body.hack {
   padding: 32px;
   max-width: 520px;
   width: min(100%, 520px);
+  max-height: min(90vh, 640px);
   text-align: center;
   box-shadow: 0 0 25px rgba(255, 0, 153, 0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .announcement-dialog h2 {
-  margin-top: 0;
-  margin-bottom: 1rem;
+  margin: 0;
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
@@ -1139,14 +1146,41 @@ body.hack {
 .announcement-message {
   font-size: 1.1rem;
   line-height: 1.6;
-  margin-bottom: 1.5rem;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: min(50vh, 320px);
+  overflow-y: auto;
+  margin: 0 auto;
+  width: 100%;
 }
 
-.announcement-author {
-  margin-bottom: 1.5rem;
+.announcement-message.announcement-message--long {
+  font-size: 1rem;
+}
+
+.announcement-message.announcement-message--very-long {
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.announcement-message.announcement-message--extreme {
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.announcement-signature {
+  margin: 0;
   font-size: 0.9rem;
   color: rgba(255, 255, 255, 0.7);
+}
+
+.announcement-signature.hidden {
+  display: none;
+}
+
+.announcement-dialog .btn {
+  align-self: center;
+  margin-top: auto;
 }
 
 @media (max-width: 768px) {
