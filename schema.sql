@@ -95,3 +95,21 @@ CREATE TABLE IF NOT EXISTS shadow_codes (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY unique_shadow_entity (entity_type, entity_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS announcements (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  message TEXT NOT NULL,
+  created_by INT DEFAULT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_announcements_creator FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS announcement_recipients (
+  announcement_id BIGINT NOT NULL,
+  user_id INT NOT NULL,
+  is_read TINYINT NOT NULL DEFAULT 0,
+  read_at TIMESTAMP NULL DEFAULT NULL,
+  PRIMARY KEY (announcement_id, user_id),
+  CONSTRAINT fk_announcement_recipients_announcement FOREIGN KEY (announcement_id) REFERENCES announcements(id) ON DELETE CASCADE,
+  CONSTRAINT fk_announcement_recipients_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

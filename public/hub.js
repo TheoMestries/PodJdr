@@ -5,6 +5,15 @@ let isPnj = false;
 let currentContactId = null;
 let chatInterval = null;
 let currentContactIsPnj = false;
+let announcementQueue = [];
+let announcementPollingInterval = null;
+let announcementAckInFlight = false;
+
+const announcementOverlay = document.getElementById('announcement-overlay');
+const announcementMessageEl = document.getElementById('announcement-message');
+const announcementAuthorEl = document.getElementById('announcement-author');
+const announcementCloseBtn = document.getElementById('announcement-close-btn');
+let activeAnnouncement = null;
 
 document.getElementById('logout-btn').addEventListener('click', async () => {
   await fetch('/logout', { method: 'POST' });
@@ -113,6 +122,9 @@ async function init() {
   loadContacts();
   loadRequests();
   loadPending();
+  if (data.userId) {
+    startAnnouncementPolling();
+  }
 }
 
 async function loadContacts() {
@@ -274,3 +286,115 @@ async function loadMessages() {
   });
 
   init();
+
+if (announcementCloseBtn) {
+  announcementCloseBtn.addEventListener('click', acknowledgeCurrentAnnouncement);
+}
+
+function startAnnouncementPolling() {
+  if (!announcementOverlay) return;
+  fetchAnnouncements();
+  if (announcementPollingInterval) {
+    clearInterval(announcementPollingInterval);
+  }
+  announcementPollingInterval = setInterval(fetchAnnouncements, 5000);
+}
+
+async function fetchAnnouncements() {
+  if (!announcementOverlay) return;
+  try {
+    const res = await fetch('/announcements/unread');
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!Array.isArray(data)) return;
+
+    const knownIds = new Set(
+      [activeAnnouncement, ...announcementQueue]
+        .filter(Boolean)
+        .map((announcement) => announcement.id)
+    );
+
+    data.forEach((announcement) => {
+      if (!knownIds.has(announcement.id)) {
+        announcementQueue.push(announcement);
+        knownIds.add(announcement.id);
+      }
+    });
+
+    if (!activeAnnouncement) {
+      showNextAnnouncement();
+    }
+  } catch (err) {
+    console.error('Erreur lors du chargement des annonces', err);
+  }
+}
+
+function showNextAnnouncement() {
+  if (activeAnnouncement || !announcementQueue.length || !announcementOverlay) {
+    return;
+  }
+  const nextAnnouncement = announcementQueue.shift();
+  if (!nextAnnouncement) return;
+  activeAnnouncement = nextAnnouncement;
+  displayAnnouncement(nextAnnouncement);
+}
+
+function displayAnnouncement(announcement) {
+  if (!announcementOverlay || !announcementMessageEl || !announcementCloseBtn) {
+    return;
+  }
+  announcementMessageEl.textContent = announcement.message || '';
+  if (announcementAuthorEl) {
+    announcementAuthorEl.textContent = announcement.author
+      ? `— ${announcement.author}`
+      : '';
+  }
+  announcementOverlay.classList.remove('hidden');
+  announcementCloseBtn.disabled = false;
+  if (typeof announcementCloseBtn.focus === 'function') {
+    try {
+      announcementCloseBtn.focus({ preventScroll: true });
+    } catch (err) {
+      announcementCloseBtn.focus();
+    }
+  }
+}
+
+async function acknowledgeCurrentAnnouncement() {
+  if (!activeAnnouncement || announcementAckInFlight) {
+    return;
+  }
+  announcementAckInFlight = true;
+  if (announcementCloseBtn) {
+    announcementCloseBtn.disabled = true;
+  }
+  try {
+    const res = await fetch(`/announcements/${activeAnnouncement.id}/read`, {
+      method: 'POST',
+    });
+    if (!res.ok) {
+      throw new Error('Réponse serveur invalide');
+    }
+    hideAnnouncementOverlay();
+    activeAnnouncement = null;
+    showNextAnnouncement();
+  } catch (err) {
+    console.error('Erreur lors de la confirmation de l\'annonce', err);
+    if (announcementCloseBtn) {
+      announcementCloseBtn.disabled = false;
+    }
+  } finally {
+    announcementAckInFlight = false;
+  }
+}
+
+function hideAnnouncementOverlay() {
+  if (!announcementOverlay) return;
+  announcementOverlay.classList.add('hidden');
+}
+
+window.addEventListener('beforeunload', () => {
+  if (announcementPollingInterval) {
+    clearInterval(announcementPollingInterval);
+  }
+});
