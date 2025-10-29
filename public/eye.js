@@ -3,6 +3,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const pupil = eye?.querySelector('.pupil');
   if (!eye || !pupil) return;
 
+  if (document.body.classList.contains('shadow-safe')) {
+    eye.classList.add('eye-disabled');
+    pupil.style.transform = 'translate(-50%, -50%)';
+    return;
+  }
+
   document.addEventListener('mousemove', (e) => {
     const rect = eye.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
