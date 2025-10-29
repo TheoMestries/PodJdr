@@ -191,11 +191,19 @@ function renderAnnouncementRecipients() {
 function setupAnnouncementForm() {
   const form = document.getElementById('announcement-form');
   const messageInput = document.getElementById('announcement-message');
+  const signatureInput = document.getElementById('announcement-signature-input');
   const selectAllBtn = document.getElementById('announcement-select-all');
   const clearBtn = document.getElementById('announcement-clear');
   const feedbackEl = document.getElementById('announcement-feedback');
 
-  if (!form || !messageInput || !selectAllBtn || !clearBtn || !feedbackEl) {
+  if (
+    !form ||
+    !messageInput ||
+    !selectAllBtn ||
+    !clearBtn ||
+    !feedbackEl ||
+    !signatureInput
+  ) {
     return;
   }
 
@@ -220,6 +228,7 @@ function setupAnnouncementForm() {
       form.querySelectorAll('.announcement-checkbox:checked'),
       (checkbox) => parseInt(checkbox.value, 10)
     ).filter((value) => Number.isInteger(value));
+    const signature = signatureInput.value.trim();
 
     if (!message) {
       setAnnouncementFeedback('Le message ne peut pas être vide.', true);
@@ -235,7 +244,11 @@ function setupAnnouncementForm() {
       const res = await fetch('/admin/announcements', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, userIds: selectedIds }),
+        body: JSON.stringify({
+          message,
+          signature,
+          userIds: selectedIds,
+        }),
       });
 
       if (!res.ok) {
@@ -245,6 +258,7 @@ function setupAnnouncementForm() {
 
       setAnnouncementFeedback('Annonce envoyée avec succès.', false);
       messageInput.value = '';
+      signatureInput.value = '';
       form.querySelectorAll('.announcement-checkbox').forEach((checkbox) => {
         checkbox.checked = false;
       });

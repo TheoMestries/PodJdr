@@ -134,11 +134,28 @@ async function ensureAnnouncementTables() {
       CREATE TABLE IF NOT EXISTS announcements (
         id BIGINT AUTO_INCREMENT PRIMARY KEY,
         message TEXT NOT NULL,
+        signature VARCHAR(255) NULL DEFAULT NULL,
         created_by INT DEFAULT NULL,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         CONSTRAINT fk_announcements_creator FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
       )
     `);
+  } catch (err) {
+    console.error("Erreur lors de la vérification de la table des annonces", err);
+  }
+
+  try {
+    await pool.execute(`
+      ALTER TABLE announcements
+      ADD COLUMN signature VARCHAR(255) NULL DEFAULT NULL
+    `);
+  } catch (err) {
+    if (err && err.code !== 'ER_DUP_FIELDNAME') {
+      console.error("Erreur lors de l'ajout de la colonne signature aux annonces", err);
+    }
+  }
+
+  try {
     await pool.execute(`
       CREATE TABLE IF NOT EXISTS announcement_recipients (
         announcement_id BIGINT NOT NULL,
@@ -151,7 +168,7 @@ async function ensureAnnouncementTables() {
       )
     `);
   } catch (err) {
-    console.error("Erreur lors de la vérification des tables d'annonces", err);
+    console.error("Erreur lors de la vérification de la table des destinataires d'annonces", err);
   }
 }
 
@@ -1326,6 +1343,14 @@ app.post('/admin/announcements', requireAdmin, async (req, res) => {
   const rawMessage =
     typeof req.body.message === 'string' ? req.body.message.trim() : '';
   const cleanedMessage = rawMessage.replace(/\r\n?/g, '\n');
+  const rawSignature =
+    typeof req.body.signature === 'string' ? req.body.signature.trim() : '';
+  if (rawSignature.length > 255) {
+    return res
+      .status(400)
+      .json({ error: 'La signature doit contenir 255 caractères au maximum' });
+  }
+  const signature = rawSignature || null;
   const userIdsInput = Array.isArray(req.body.userIds) ? req.body.userIds : [];
   const userIds = Array.from(
     new Set(
@@ -1350,8 +1375,8 @@ app.post('/admin/announcements', requireAdmin, async (req, res) => {
     connection = await pool.getConnection();
     await connection.beginTransaction();
     const [result] = await connection.execute(
-      'INSERT INTO announcements (message, created_by) VALUES (?, ?)',
-      [cleanedMessage, req.session.userId || null]
+      'INSERT INTO announcements (message, signature, created_by) VALUES (?, ?, ?)',
+      [cleanedMessage, signature, req.session.userId || null]
     );
     const announcementId = result.insertId;
     const valuesPlaceholders = userIds.map(() => '(?, ?)').join(', ');
@@ -1387,11 +1412,10 @@ app.get('/announcements/unread', requireAuth, async (req, res) => {
     const [rows] = await pool.execute(
       `SELECT ar.announcement_id AS id,
               a.message,
-              a.created_at AS createdAt,
-              COALESCE(author.username, 'Administration') AS author
+              a.signature,
+              a.created_at AS createdAt
        FROM announcement_recipients ar
        JOIN announcements a ON a.id = ar.announcement_id
-       LEFT JOIN users author ON author.id = a.created_by
        WHERE ar.user_id = ? AND ar.is_read = 0
        ORDER BY a.created_at ASC`,
       [req.session.userId]
@@ -1400,8 +1424,8 @@ app.get('/announcements/unread', requireAuth, async (req, res) => {
     const formatted = rows.map((row) => ({
       id: row.id,
       message: row.message,
+      signature: row.signature,
       createdAt: row.createdAt,
-      author: row.author,
     }));
 
     res.json(formatted);
