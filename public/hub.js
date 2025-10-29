@@ -292,7 +292,8 @@ if (announcementCloseBtn) {
 }
 
 function startAnnouncementPolling() {
-  if (!announcementOverlay) return;
+
+    if (!announcementOverlay) return;
   fetchAnnouncements();
   if (announcementPollingInterval) {
     clearInterval(announcementPollingInterval);
@@ -301,7 +302,8 @@ function startAnnouncementPolling() {
 }
 
 async function fetchAnnouncements() {
-  if (!announcementOverlay) return;
+
+    if (!announcementOverlay) return;
   try {
     const res = await fetch('/announcements/unread');
     if (!res.ok) return;
@@ -332,22 +334,38 @@ async function fetchAnnouncements() {
       }
     });
 
-    if (!activeAnnouncement) {
-      showNextAnnouncement();
-    }
+      if (!activeAnnouncement && announcementQueue.length) {
+          showNextAnnouncement();
+      }
   } catch (err) {
     console.error('Erreur lors du chargement des annonces', err);
   }
 }
 
 function showNextAnnouncement() {
-  if (activeAnnouncement || !announcementQueue.length || !announcementOverlay) {
-    return;
-  }
-  const nextAnnouncement = announcementQueue.shift();
-  if (!nextAnnouncement) return;
-  activeAnnouncement = nextAnnouncement;
-  displayAnnouncement(nextAnnouncement);
+    if (!announcementOverlay) return;
+
+    // ✅ Si aucune annonce à afficher → on cache tout
+    if (!announcementQueue.length) {
+        hideAnnouncementOverlay();
+        activeAnnouncement = null;
+        return;
+    }
+
+    // ✅ Ne pas rouvrir si une annonce est déjà en cours
+    if (activeAnnouncement) return;
+
+    const nextAnnouncement = announcementQueue.shift();
+
+    // ✅ Si pas de message valide → ne rien afficher
+    if (!nextAnnouncement || !nextAnnouncement.message || !nextAnnouncement.message.trim()) {
+        hideAnnouncementOverlay();
+        activeAnnouncement = null;
+        return;
+    }
+
+    activeAnnouncement = nextAnnouncement;
+    displayAnnouncement(nextAnnouncement);
 }
 
 function adjustAnnouncementLayout(messageLength) {
@@ -405,49 +423,36 @@ function displayAnnouncement(announcement) {
 }
 
 async function acknowledgeCurrentAnnouncement() {
-  if (announcementAckInFlight) {
-    return;
-  }
+    if (announcementAckInFlight) return;
 
-  const announcementToAcknowledge = activeAnnouncement;
-  if (!announcementToAcknowledge) {
-    hideAnnouncementOverlay();
-    return;
-  }
+    const announcementToAcknowledge = activeAnnouncement;
+    if (!announcementToAcknowledge) return;
 
-  announcementAckInFlight = true;
-  if (announcementCloseBtn) {
+    announcementAckInFlight = true;
     announcementCloseBtn.disabled = true;
-  }
 
-  hideAnnouncementOverlay();
-  activeAnnouncement = null;
-  showNextAnnouncement();
+    try {
+        const res = await fetch(`/announcements/${announcementToAcknowledge.id}/read`, { method: 'POST' });
+        if (!res.ok && res.status !== 404) throw new Error('Réponse serveur invalide');
+    } catch (err) {
+        console.error("Erreur lors de la confirmation de l'annonce", err);
+    } finally {
+        // ✅ On ferme uniquement après avoir marqué l'annonce comme lue
+        hideAnnouncementOverlay();
+        activeAnnouncement = null;
+        announcementAckInFlight = false;
+        announcementCloseBtn.disabled = false;
 
-  try {
-    const res = await fetch(`/announcements/${announcementToAcknowledge.id}/read`, {
-      method: 'POST',
-    });
-    if (!res.ok && res.status !== 404) {
-      throw new Error('Réponse serveur invalide');
+        // S'il reste d'autres annonces, on affiche la suivante
+        if (announcementQueue.length) {
+            showNextAnnouncement();
+        }
     }
-  } catch (err) {
-    console.error('Erreur lors de la confirmation de l\'annonce', err);
-    announcementQueue.unshift(announcementToAcknowledge);
-    if (!activeAnnouncement) {
-      showNextAnnouncement();
-    }
-  } finally {
-    announcementAckInFlight = false;
-    if (announcementCloseBtn) {
-      announcementCloseBtn.disabled = false;
-    }
-  }
 }
 
 function hideAnnouncementOverlay() {
   if (!announcementOverlay) return;
-  announcementOverlay.classList.add('hidden');
+    announcementOverlay.classList.add('hidden');
   if (announcementMessageEl) {
     announcementMessageEl.textContent = '';
     announcementMessageEl.classList.remove(
