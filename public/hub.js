@@ -405,30 +405,43 @@ function displayAnnouncement(announcement) {
 }
 
 async function acknowledgeCurrentAnnouncement() {
-  if (!activeAnnouncement || announcementAckInFlight) {
+  if (announcementAckInFlight) {
     return;
   }
+
+  const announcementToAcknowledge = activeAnnouncement;
+  if (!announcementToAcknowledge) {
+    hideAnnouncementOverlay();
+    return;
+  }
+
   announcementAckInFlight = true;
   if (announcementCloseBtn) {
     announcementCloseBtn.disabled = true;
   }
+
+  hideAnnouncementOverlay();
+  activeAnnouncement = null;
+  showNextAnnouncement();
+
   try {
-    const res = await fetch(`/announcements/${activeAnnouncement.id}/read`, {
+    const res = await fetch(`/announcements/${announcementToAcknowledge.id}/read`, {
       method: 'POST',
     });
     if (!res.ok && res.status !== 404) {
       throw new Error('Réponse serveur invalide');
     }
-    hideAnnouncementOverlay();
-    activeAnnouncement = null;
-    showNextAnnouncement();
   } catch (err) {
     console.error('Erreur lors de la confirmation de l\'annonce', err);
-    if (announcementCloseBtn) {
-      announcementCloseBtn.disabled = false;
+    announcementQueue.unshift(announcementToAcknowledge);
+    if (!activeAnnouncement) {
+      showNextAnnouncement();
     }
   } finally {
     announcementAckInFlight = false;
+    if (announcementCloseBtn) {
+      announcementCloseBtn.disabled = false;
+    }
   }
 }
 
