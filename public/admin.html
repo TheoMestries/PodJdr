@@ -68,6 +68,37 @@
         </div>
       </div>
     </section>
+
+    <section id="announcement-section" class="panel">
+      <h2>Annonces instantanées</h2>
+      <form id="announcement-form" class="announcement-form">
+        <label for="announcement-message">Message</label>
+        <textarea
+          id="announcement-message"
+          rows="4"
+          placeholder="Votre message d'annonce..."
+          required
+        ></textarea>
+
+        <div class="announcement-controls">
+          <button type="button" id="announcement-select-all" class="btn">
+            Tout sélectionner
+          </button>
+          <button type="button" id="announcement-clear" class="btn btn-secondary">
+            Tout désélectionner
+          </button>
+        </div>
+
+        <div class="announcement-recipient-wrapper">
+          <h3>Destinataires</h3>
+          <ul id="announcement-recipient-list" class="announcement-recipient-list"></ul>
+        </div>
+
+        <p id="announcement-feedback" class="form-feedback hidden" role="status"></p>
+
+        <button type="submit" class="btn">Envoyer l'annonce</button>
+      </form>
+    </section>
   </main>
 
   <script src="admin.js"></script>

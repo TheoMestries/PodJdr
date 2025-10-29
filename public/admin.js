@@ -16,6 +16,7 @@ async function init() {
   }
   loadPnjs();
   loadShadowAccess();
+  initAnnouncements();
 }
 
 async function loadPnjs() {
@@ -125,4 +126,140 @@ document.getElementById('shadow-pnj-form').addEventListener('submit', async (e) 
 });
 
 init();
+
+let announcementRecipients = [];
+
+async function initAnnouncements() {
+  await loadAnnouncementRecipients();
+  setupAnnouncementForm();
+}
+
+async function loadAnnouncementRecipients() {
+  const list = document.getElementById('announcement-recipient-list');
+  if (!list) return;
+  list.innerHTML = '<li>Chargement...</li>';
+
+  try {
+    const res = await fetch('/admin/users');
+    if (!res.ok) {
+      throw new Error('Impossible de charger les joueurs');
+    }
+    const users = await res.json();
+    announcementRecipients = Array.isArray(users) ? users : [];
+    renderAnnouncementRecipients();
+  } catch (err) {
+    console.error(err);
+    list.innerHTML = '<li class="empty-entry">Erreur de chargement</li>';
+  }
+}
+
+function renderAnnouncementRecipients() {
+  const list = document.getElementById('announcement-recipient-list');
+  if (!list) return;
+  list.innerHTML = '';
+
+  if (!announcementRecipients.length) {
+    const li = document.createElement('li');
+    li.classList.add('empty-entry');
+    li.textContent = 'Aucun joueur disponible';
+    list.appendChild(li);
+    return;
+  }
+
+  announcementRecipients.forEach(({ id, username }) => {
+    const li = document.createElement('li');
+    li.classList.add('announcement-recipient');
+
+    const label = document.createElement('label');
+    label.classList.add('announcement-recipient-label');
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.classList.add('announcement-checkbox');
+    checkbox.value = id;
+
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = username;
+
+    label.appendChild(checkbox);
+    label.appendChild(nameSpan);
+    li.appendChild(label);
+    list.appendChild(li);
+  });
+}
+
+function setupAnnouncementForm() {
+  const form = document.getElementById('announcement-form');
+  const messageInput = document.getElementById('announcement-message');
+  const selectAllBtn = document.getElementById('announcement-select-all');
+  const clearBtn = document.getElementById('announcement-clear');
+  const feedbackEl = document.getElementById('announcement-feedback');
+
+  if (!form || !messageInput || !selectAllBtn || !clearBtn || !feedbackEl) {
+    return;
+  }
+
+  selectAllBtn.addEventListener('click', () => {
+    const checkboxes = form.querySelectorAll('.announcement-checkbox');
+    checkboxes.forEach((checkbox) => {
+      checkbox.checked = true;
+    });
+  });
+
+  clearBtn.addEventListener('click', () => {
+    const checkboxes = form.querySelectorAll('.announcement-checkbox');
+    checkboxes.forEach((checkbox) => {
+      checkbox.checked = false;
+    });
+  });
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const message = messageInput.value.trim();
+    const selectedIds = Array.from(
+      form.querySelectorAll('.announcement-checkbox:checked'),
+      (checkbox) => parseInt(checkbox.value, 10)
+    ).filter((value) => Number.isInteger(value));
+
+    if (!message) {
+      setAnnouncementFeedback('Le message ne peut pas être vide.', true);
+      return;
+    }
+
+    if (!selectedIds.length) {
+      setAnnouncementFeedback('Sélectionnez au moins un joueur.', true);
+      return;
+    }
+
+    try {
+      const res = await fetch('/admin/announcements', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, userIds: selectedIds }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Impossible d'envoyer l'annonce");
+      }
+
+      setAnnouncementFeedback('Annonce envoyée avec succès.', false);
+      messageInput.value = '';
+      form.querySelectorAll('.announcement-checkbox').forEach((checkbox) => {
+        checkbox.checked = false;
+      });
+    } catch (err) {
+      setAnnouncementFeedback(err.message, true);
+    }
+  });
+}
+
+function setAnnouncementFeedback(message, isError) {
+  const feedbackEl = document.getElementById('announcement-feedback');
+  if (!feedbackEl) return;
+  feedbackEl.textContent = message;
+  feedbackEl.classList.toggle('error', !!isError);
+  feedbackEl.classList.toggle('success', !isError);
+  feedbackEl.classList.remove('hidden');
+}
 

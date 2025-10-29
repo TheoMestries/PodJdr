@@ -128,6 +128,43 @@ async function initializeShadowInfrastructure() {
 
 initializeShadowInfrastructure();
 
+async function ensureAnnouncementTables() {
+  try {
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS announcements (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        message TEXT NOT NULL,
+        created_by INT DEFAULT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT fk_announcements_creator FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+      )
+    `);
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS announcement_recipients (
+        announcement_id BIGINT NOT NULL,
+        user_id INT NOT NULL,
+        is_read TINYINT NOT NULL DEFAULT 0,
+        read_at TIMESTAMP NULL DEFAULT NULL,
+        PRIMARY KEY (announcement_id, user_id),
+        CONSTRAINT fk_announcement_recipients_announcement FOREIGN KEY (announcement_id) REFERENCES announcements(id) ON DELETE CASCADE,
+        CONSTRAINT fk_announcement_recipients_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+  } catch (err) {
+    console.error("Erreur lors de la vérification des tables d'annonces", err);
+  }
+}
+
+async function initializeAnnouncementInfrastructure() {
+  try {
+    await ensureAnnouncementTables();
+  } catch (err) {
+    console.error("Erreur lors de l'initialisation des annonces", err);
+  }
+}
+
+initializeAnnouncementInfrastructure();
+
 const shadowCodeCache = {
   user: new Map(),
   pnj: new Map(),
@@ -982,6 +1019,20 @@ app.get('/admin/shadow-access', requireAdmin, async (req, res) => {
   }
 });
 
+app.get('/admin/users', requireAdmin, async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      `SELECT id, username
+       FROM users
+       WHERE is_admin = 0
+       ORDER BY username ASC`
+    );
+    res.json(rows);
+  } catch (err) {
+    handleDbError(err, res);
+  }
+});
+
 app.post('/admin/shadow-access', requireAdmin, async (req, res) => {
   const { type, identifier } = req.body;
   const normalized = (identifier || '').trim().toLowerCase();
@@ -1266,6 +1317,122 @@ app.delete('/admin/pnjs/:id', requireAdmin, async (req, res) => {
   try {
     await pool.execute('DELETE FROM pnjs WHERE id = ?', [id]);
     res.json({ message: 'PNJ supprimé' });
+  } catch (err) {
+    handleDbError(err, res);
+  }
+});
+
+app.post('/admin/announcements', requireAdmin, async (req, res) => {
+  const rawMessage =
+    typeof req.body.message === 'string' ? req.body.message.trim() : '';
+  const cleanedMessage = rawMessage.replace(/\r\n?/g, '\n');
+  const userIdsInput = Array.isArray(req.body.userIds) ? req.body.userIds : [];
+  const userIds = Array.from(
+    new Set(
+      userIdsInput
+        .map((value) => parseInt(value, 10))
+        .filter((value) => Number.isInteger(value) && value > 0)
+    )
+  );
+
+  if (!cleanedMessage) {
+    return res.status(400).json({ error: 'Le message est requis' });
+  }
+
+  if (!userIds.length) {
+    return res
+      .status(400)
+      .json({ error: 'Au moins un destinataire doit être sélectionné' });
+  }
+
+  let connection;
+  try {
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+    const [result] = await connection.execute(
+      'INSERT INTO announcements (message, created_by) VALUES (?, ?)',
+      [cleanedMessage, req.session.userId || null]
+    );
+    const announcementId = result.insertId;
+    const valuesPlaceholders = userIds.map(() => '(?, ?)').join(', ');
+    const values = userIds.flatMap((userId) => [announcementId, userId]);
+    await connection.execute(
+      `INSERT INTO announcement_recipients (announcement_id, user_id) VALUES ${valuesPlaceholders}`,
+      values
+    );
+    await connection.commit();
+    res.status(201).json({ message: 'Annonce envoyée' });
+  } catch (err) {
+    if (connection) {
+      try {
+        await connection.rollback();
+      } catch (rollbackErr) {
+        console.error('Erreur lors du rollback des annonces', rollbackErr);
+      }
+    }
+    handleDbError(err, res);
+  } finally {
+    if (connection) {
+      connection.release();
+    }
+  }
+});
+
+app.get('/announcements/unread', requireAuth, async (req, res) => {
+  if (!req.session.userId) {
+    return res.json([]);
+  }
+
+  try {
+    const [rows] = await pool.execute(
+      `SELECT ar.announcement_id AS id,
+              a.message,
+              a.created_at AS createdAt,
+              COALESCE(author.username, 'Administration') AS author
+       FROM announcement_recipients ar
+       JOIN announcements a ON a.id = ar.announcement_id
+       LEFT JOIN users author ON author.id = a.created_by
+       WHERE ar.user_id = ? AND ar.is_read = 0
+       ORDER BY a.created_at ASC`,
+      [req.session.userId]
+    );
+
+    const formatted = rows.map((row) => ({
+      id: row.id,
+      message: row.message,
+      createdAt: row.createdAt,
+      author: row.author,
+    }));
+
+    res.json(formatted);
+  } catch (err) {
+    handleDbError(err, res);
+  }
+});
+
+app.post('/announcements/:id/read', requireAuth, async (req, res) => {
+  if (!req.session.userId) {
+    return res.status(403).json({ error: 'Accès réservé aux joueurs' });
+  }
+
+  const announcementId = parseInt(req.params.id, 10);
+  if (!Number.isInteger(announcementId) || announcementId <= 0) {
+    return res.status(400).json({ error: 'Identifiant invalide' });
+  }
+
+  try {
+    const [result] = await pool.execute(
+      `UPDATE announcement_recipients
+       SET is_read = 1, read_at = NOW()
+       WHERE announcement_id = ? AND user_id = ?`,
+      [announcementId, req.session.userId]
+    );
+
+    if (!result.affectedRows) {
+      return res.status(404).json({ error: 'Annonce introuvable' });
+    }
+
+    res.json({ message: 'Annonce confirmée' });
   } catch (err) {
     handleDbError(err, res);
   }
