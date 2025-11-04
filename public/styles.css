@@ -235,6 +235,208 @@ body.auth {
   height: calc(100dvh - 70px);
 }
 
+.hub-container.admin-dashboard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(1rem, 2.5vw, 2.25rem);
+  padding: clamp(1rem, 4vw, 2.5rem);
+  width: min(1100px, 100%);
+  margin: 0 auto;
+  height: auto;
+  min-height: calc(100vh - var(--top-bar-height));
+  min-height: calc(100dvh - var(--top-bar-height));
+  align-content: start;
+}
+
+.admin-dashboard .panel {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1rem, 3vw, 1.75rem);
+  padding: clamp(1.25rem, 2.5vw, 1.75rem);
+}
+
+.admin-dashboard .panel-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.admin-dashboard .panel-title {
+  margin: 0;
+  font-size: clamp(1.25rem, 1.8vw, 1.6rem);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--secondary);
+}
+
+.admin-dashboard .panel-description {
+  margin: 0;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.5;
+}
+
+.admin-dashboard .panel-content {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1rem, 2.5vw, 1.75rem);
+}
+
+.admin-dashboard #announcement-section {
+  grid-column: 1 / -1;
+}
+
+.table-scroll {
+  overflow-x: auto;
+  border: 1px solid rgba(0, 255, 231, 0.2);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.25);
+  box-shadow: inset 0 0 15px rgba(0, 255, 231, 0.08);
+}
+
+.table-scroll table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+}
+
+.admin-dashboard #pnj-table th,
+.admin-dashboard #pnj-table td {
+  white-space: nowrap;
+}
+
+.admin-dashboard #pnj-table td:nth-child(2) {
+  white-space: normal;
+  min-width: 220px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  align-items: end;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.form-actions .btn {
+  min-width: 160px;
+}
+
+@media (min-width: 900px) {
+  .hub-container.admin-dashboard {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  }
+
+  .admin-dashboard #pnj-section {
+    grid-column: 1;
+  }
+
+  .admin-dashboard #shadow-section {
+    grid-column: 2;
+    align-self: flex-start;
+  }
+}
+
+@media (min-width: 1200px) {
+  .hub-container.admin-dashboard {
+    width: min(1280px, 100%);
+  }
+}
+
+@media (max-width: 1024px) {
+  .hub-container.admin-dashboard {
+    padding: clamp(1rem, 6vw, 2rem);
+  }
+
+  .admin-dashboard .panel {
+    padding: clamp(1.1rem, 4vw, 1.5rem);
+  }
+}
+
+@media (max-width: 900px) {
+  .top-bar {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .top-bar .logo-wrapper {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 780px) {
+  .announcement-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .announcement-controls .btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .table-scroll table {
+    min-width: 540px;
+  }
+}
+
+@media (max-width: 600px) {
+  .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .form-actions {
+    justify-content: stretch;
+  }
+
+  .form-actions .btn {
+    width: 100%;
+  }
+
+  .admin-dashboard .panel-description {
+    font-size: 0.85rem;
+  }
+
+  .top-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+    text-align: center;
+  }
+
+  .top-bar .logo-wrapper {
+    justify-content: center;
+  }
+
+  .top-bar .btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .hub-container.admin-dashboard {
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .table-scroll table {
+    min-width: 480px;
+  }
+}
+
 #pnj-section {
   flex: 1;
   overflow-y: auto;
@@ -258,22 +460,24 @@ body.auth {
 }
 
 .pnj-form {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  align-items: center;
+  margin: 0;
+  gap: 1rem;
 }
 
 .pnj-form label {
-  flex: 0 0 100px;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
 }
 
 .pnj-form input {
-  flex: 1;
-  padding: 5px;
+  width: 100%;
+  padding: 0.65rem 0.75rem;
   background: rgba(0, 0, 0, 0.4);
   border: 1px solid var(--secondary);
   color: var(--primary);
+  border-radius: 8px;
 }
 
 .sidebar {
