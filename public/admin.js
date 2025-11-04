@@ -28,13 +28,26 @@ async function loadPnjs() {
   const pnjs = await res.json();
   const tbody = document.querySelector('#pnj-table tbody');
   tbody.innerHTML = '';
-  pnjs.forEach(({ id, name, description, pending_requests, unread_messages }) => {
+  pnjs.forEach(({
+    id,
+    name,
+    description,
+    pending_requests,
+    unread_messages,
+    has_shadow_access,
+  }) => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `\n      <td>${name}</td>\n      <td>${description || ''}</td>\n      <td>${pending_requests}</td>\n      <td>${unread_messages}</td>\n      <td>\n        <button class="btn impersonate-btn">👁️</button>\n        <button class="btn delete-btn">🗑️</button>\n      </td>`;
+    tr.innerHTML = `\n      <td>${name}</td>\n      <td>${description || ''}</td>\n      <td>${pending_requests}</td>\n      <td>${unread_messages}</td>\n      <td>\n        <button class="btn impersonate-btn" title="Ouvrir le hub">👁️</button>\n        ${has_shadow_access ? '<button class="btn shadow-btn" title="Accéder à Shadow">🕶️</button>' : ''}\n        <button class="btn delete-btn" title="Supprimer le PNJ">🗑️</button>\n      </td>`;
     tr.querySelector('.impersonate-btn').addEventListener('click', async () => {
       await fetch(`/admin/pnjs/${id}/impersonate`, { method: 'POST' });
       window.location.href = '/hub.html';
     });
+    if (has_shadow_access) {
+      tr.querySelector('.shadow-btn').addEventListener('click', async () => {
+        await fetch(`/admin/pnjs/${id}/impersonate`, { method: 'POST' });
+        window.location.href = '/hack-msg.html';
+      });
+    }
     tr.querySelector('.delete-btn').addEventListener('click', async () => {
       await fetch(`/admin/pnjs/${id}`, { method: 'DELETE' });
       loadPnjs();

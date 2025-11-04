@@ -671,13 +671,13 @@ app.get('/contact-requests', requireAuth, async (req, res) => {
     }
 
     const userId = req.session.userId;
-    const [rows] = await pool.execute(
-      `SELECT u.username, c.user_id AS requesterId, 0 AS is_pnj FROM contacts c JOIN users u ON c.user_id = u.id WHERE c.contact_id = ? AND c.status = 0
-       UNION
-       SELECT p.name AS username, c.pnj_id AS requesterId, 1 AS is_pnj FROM pnj_contacts c JOIN pnjs p ON c.pnj_id = p.id WHERE c.user_id = ? AND c.status = 0`,
-      [userId, userId]
-    );
-    res.json(rows);
+      const [rows] = await pool.execute(
+        `SELECT u.username, c.user_id AS requesterId, 0 AS is_pnj FROM contacts c JOIN users u ON c.user_id = u.id WHERE c.contact_id = ? AND c.status = 0
+         UNION
+         SELECT p.name AS username, c.pnj_id AS requesterId, 1 AS is_pnj FROM pnj_contacts c JOIN pnjs p ON c.pnj_id = p.id WHERE c.user_id = ? AND c.status = 0`,
+        [userId, userId]
+      );
+      res.json(rows);
   } catch (err) {
     handleDbError(err, res);
   }
@@ -1306,7 +1306,11 @@ app.get('/admin/pnjs', requireAdmin, async (req, res) => {
           (SELECT COUNT(*) FROM messages m WHERE m.receiver_pnj_id = p.id AND m.is_read = 0) AS unread_messages
        FROM pnjs p`
     );
-    res.json(rows);
+    const pnjs = rows.map((row) => ({
+      ...row,
+      has_shadow_access: hasShadowAccessForPnj(row.name),
+    }));
+    res.json(pnjs);
   } catch (err) {
     handleDbError(err, res);
   }
