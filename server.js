@@ -18,6 +18,27 @@ app.use(
 
 const diceLog = [];
 
+const adminPnjStreams = new Set();
+
+function broadcastAdminPnjUpdate() {
+  if (!adminPnjStreams.size) {
+    return;
+  }
+  const payload = `event: pnj-update\ndata: {}\n\n`;
+  for (const stream of adminPnjStreams) {
+    try {
+      stream.write(payload);
+    } catch (err) {
+      try {
+        stream.end();
+      } catch (endErr) {
+        // ignore
+      }
+      adminPnjStreams.delete(stream);
+    }
+  }
+}
+
 const envHiddenAccessUsersRaw = (process.env.HIDDEN_MESSAGE_USERS || '')
   .split(',')
   .map((name) => name.trim())
@@ -740,6 +761,7 @@ app.post('/contacts', requireAuth, async (req, res) => {
         'INSERT INTO pnj_contacts (pnj_id, user_id, status) VALUES (?, ?, 2)',
         [pnjId, userId]
       );
+      broadcastAdminPnjUpdate();
       return res.status(201).json({ message: 'Demande envoyée' });
     }
 
@@ -758,6 +780,7 @@ app.post('/contacts/accept', requireAuth, async (req, res) => {
         'UPDATE pnj_contacts SET status = 1 WHERE pnj_id = ? AND user_id = ? AND status = 2',
         [req.session.pnjId, requesterId]
       );
+      broadcastAdminPnjUpdate();
       return res.json({ message: 'Contact accepté' });
     }
 
@@ -794,6 +817,7 @@ app.delete('/contacts', requireAuth, async (req, res) => {
         'DELETE FROM pnj_contacts WHERE pnj_id = ? AND user_id = ?',
         [req.session.pnjId, contactId]
       );
+      broadcastAdminPnjUpdate();
       return res.json({ message: 'Contact supprimé' });
     } catch (err) {
       return handleDbError(err, res);
@@ -807,6 +831,7 @@ app.delete('/contacts', requireAuth, async (req, res) => {
         'DELETE FROM pnj_contacts WHERE pnj_id = ? AND user_id = ?',
         [contactId, userId]
       );
+      broadcastAdminPnjUpdate();
     } else {
       await pool.execute(
         'DELETE FROM contacts WHERE (user_id = ? AND contact_id = ?) OR (user_id = ? AND contact_id = ?)',
@@ -840,6 +865,7 @@ app.get('/messages', requireAuth, async (req, res) => {
             .join(',')})`,
           unreadIds
         );
+        broadcastAdminPnjUpdate();
       }
       return res.json(rows);
     }
@@ -899,6 +925,9 @@ app.post('/messages', requireAuth, async (req, res) => {
       'INSERT INTO messages (sender_user_id, sender_pnj_id, receiver_user_id, receiver_pnj_id, content, is_read) VALUES (?, ?, ?, ?, ?, 0)',
       [senderUserId, senderPnjId, receiverUserId, receiverPnjId, content]
     );
+    if (receiverPnjId) {
+      broadcastAdminPnjUpdate();
+    }
     res.status(201).json({ message: 'Message envoyé' });
   } catch (err) {
     handleDbError(err, res);
@@ -1241,6 +1270,33 @@ app.get('/stats', requireAuth, async (req, res) => {
   }
 });
 
+// Flux temps réel pour la table des PNJ (admin)
+app.get('/admin/pnjs/stream', requireAdmin, (req, res) => {
+  res.set({
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+  });
+  if (res.flushHeaders) {
+    res.flushHeaders();
+  }
+  res.write('retry: 10000\n\n');
+  adminPnjStreams.add(res);
+
+  const keepAlive = setInterval(() => {
+    if (res.writableEnded) {
+      clearInterval(keepAlive);
+      return;
+    }
+    res.write(': keep-alive\n\n');
+  }, 30000);
+
+  req.on('close', () => {
+    clearInterval(keepAlive);
+    adminPnjStreams.delete(res);
+  });
+});
+
 // Gestion des PNJ (admin)
 app.get('/admin/pnjs', requireAdmin, async (req, res) => {
   try {
@@ -1269,6 +1325,7 @@ app.post('/admin/pnjs', requireAdmin, async (req, res) => {
       await pool.execute('DELETE FROM pnjs WHERE id = ?', [result.insertId]);
       throw codeErr;
     }
+    broadcastAdminPnjUpdate();
     res.status(201).json({ message: 'PNJ créé' });
   } catch (err) {
     handleDbError(err, res);
@@ -1323,6 +1380,7 @@ app.put('/admin/pnjs/:id', requireAdmin, async (req, res) => {
       'UPDATE pnjs SET name = ?, description = ? WHERE id = ?',
       [name, description, id]
     );
+    broadcastAdminPnjUpdate();
     res.json({ message: 'PNJ mis à jour' });
   } catch (err) {
     handleDbError(err, res);
@@ -1333,6 +1391,7 @@ app.delete('/admin/pnjs/:id', requireAdmin, async (req, res) => {
   const { id } = req.params;
   try {
     await pool.execute('DELETE FROM pnjs WHERE id = ?', [id]);
+    broadcastAdminPnjUpdate();
     res.json({ message: 'PNJ supprimé' });
   } catch (err) {
     handleDbError(err, res);
