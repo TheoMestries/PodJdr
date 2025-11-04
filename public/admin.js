@@ -3,6 +3,8 @@ document.getElementById('logout-btn').addEventListener('click', async () => {
   window.location.href = '/';
 });
 
+let pnjUpdatesSource = null;
+
 async function init() {
   const res = await fetch('/me');
   if (!res.ok) {
@@ -15,6 +17,7 @@ async function init() {
     return;
   }
   loadPnjs();
+  initPnjLiveUpdates();
   loadShadowAccess();
   initAnnouncements();
 }
@@ -53,6 +56,32 @@ document.getElementById('pnj-form').addEventListener('submit', async (e) => {
     document.getElementById('pnj-name').value = '';
     document.getElementById('pnj-description').value = '';
     loadPnjs();
+  }
+});
+
+function initPnjLiveUpdates() {
+  if (typeof EventSource === 'undefined') {
+    return;
+  }
+  if (pnjUpdatesSource) {
+    pnjUpdatesSource.close();
+  }
+  pnjUpdatesSource = new EventSource('/admin/pnjs/stream');
+  pnjUpdatesSource.addEventListener('pnj-update', () => {
+    loadPnjs();
+  });
+  pnjUpdatesSource.addEventListener('error', () => {
+    // Let the browser attempt automatic reconnection. Close if the stream ended.
+    if (pnjUpdatesSource && pnjUpdatesSource.readyState === EventSource.CLOSED) {
+      pnjUpdatesSource.close();
+    }
+  });
+}
+
+window.addEventListener('beforeunload', () => {
+  if (pnjUpdatesSource) {
+    pnjUpdatesSource.close();
+    pnjUpdatesSource = null;
   }
 });
 
