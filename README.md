@@ -12,6 +12,20 @@ npm start
 Ouvrir ensuite [http://localhost:3000](http://localhost:3000) pour voir la page de
 connexion.
 
+## Administration de la base avec phpMyAdmin
+
+Un conteneur phpMyAdmin est fourni via Docker Compose pour administrer la base
+MySQL utilisée par le projet. Il reprend les mêmes variables d'environnement que
+le serveur Node.js.
+
+```bash
+docker compose up -d
+```
+
+Ouvre ensuite [http://localhost:8081](http://localhost:8081) et connecte-toi
+avec les identifiants définis dans `DB_USER` / `DB_PASSWORD` (ou leurs valeurs
+par défaut).
+
 ### Configuration de la base de données
 
 Le pool MySQL lit plusieurs variables d'environnement pour s'adapter à ton
