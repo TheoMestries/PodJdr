@@ -3,10 +3,11 @@ version: "3.8"
 services:
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin
     ports:
       - "8081:80"
     environment:
-      PMA_HOST: ${DB_HOST:-127.0.0.1}
-      PMA_PORT: ${DB_PORT:-3306}
-      PMA_USER: ${DB_USER:-podjdr}
-      PMA_PASSWORD: ${DB_PASSWORD:-podmdp}
+      PMA_HOST: 10.107.220.7
+      PMA_PORT: 3306
+    volumes:
+      - ./phpmyadmin/config.inc.php:/etc/phpmyadmin/config.inc.php:ro
