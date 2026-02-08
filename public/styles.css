@@ -144,6 +144,34 @@ body.auth {
   transition: transform 0.05s linear;
 }
 
+.logo-eye.eye-disabled {
+  border-color: var(--secondary);
+}
+
+.logo-eye.eye-disabled .pupil {
+  transform: translate(-50%, -50%) !important;
+}
+
+.logo-eye.eye-disabled::before,
+.logo-eye.eye-disabled::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 140%;
+  height: 2px;
+  background: var(--secondary);
+  transform-origin: center;
+}
+
+.logo-eye.eye-disabled::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.logo-eye.eye-disabled::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
 /* LOGIN & REGISTER */
 .login-container {
   background: var(--panel-bg);
